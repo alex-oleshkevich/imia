@@ -1,0 +1,76 @@
+[tool.poetry]
+name = "imia"
+description = "Full stack authentication library for ASGI."
+version = "0.1.0"
+authors = ["Alex Oleshkevich <alex.oleshkevich@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/alex-oleshkevich/imia"
+repository = "https://github.com/alex-oleshkevich/imia"
+documentation = "https://github.com/alex-oleshkevich/imia"
+keywords = []
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.6",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[tool.poetry.dependencies]
+python = "^3.6.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.4"
+pytest-asyncio = "^0.15.1"
+requests = "^2.25.1"
+pytest-coverage = "^0.0"
+black = "^21.7b0"
+mypy = "^0.910"
+flake8 = "^3.9.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+target-version = ["py36"]
+skip-string-normalization = true
+line_length = 120
+
+[tool.isort]
+combine_as_imports = true
+include_trailing_comma = true
+known_standard_library = "dataclasses,typing_extensions"
+known_first_party = "imia"
+known_third_party = ["pkg_resources", "toml"]
+known_future_library = "__future__"
+line_length = 120
+multi_line_output = 3
+not_skip = "__init__.py"
+profile = "black"
+use_parentheses = true
+
+[tool.coverage.run]
+branch = true
+source = ["imia"]
+omit = ["tests/*", ".venv/*", "*/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError"
+]
+
+[tool.mypy]
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = "^tests/"
