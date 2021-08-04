@@ -6,7 +6,6 @@ import hmac
 import re
 import secrets
 import typing as t
-
 from starlette.requests import HTTPConnection
 from starlette.responses import RedirectResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -63,7 +62,7 @@ class UserLike(t.Protocol):  # pragma: no cover
     def get_hashed_password(self) -> str:
         ...
 
-    def get_scopes(self) -> list[str]:
+    def get_scopes(self) -> t.List[str]:
         ...
 
 
@@ -92,7 +91,7 @@ class UserToken:
         return self.state == LoginState.IMPERSONATOR
 
     @property
-    def scopes(self) -> list[str]:
+    def scopes(self) -> t.List[str]:
         return self.user.get_scopes()
 
     @property
@@ -131,7 +130,7 @@ class AnonymousUser:
     def get_hashed_password(self) -> str:
         return ''
 
-    def get_scopes(self) -> list[str]:
+    def get_scopes(self) -> t.List[str]:
         return []
 
 
@@ -156,7 +155,7 @@ class UserProvider(abc.ABC):  # pragma: no cover
 class InMemoryProvider(UserProvider):
     """A user provides that uses a predefined map of users."""
 
-    def __init__(self, user_map: dict[str, UserLike]) -> None:
+    def __init__(self, user_map: t.Mapping[str, UserLike]) -> None:
         self.user_map = user_map
 
     async def find_by_id(self, identifier: str) -> t.Optional[UserLike]:
@@ -315,10 +314,10 @@ class AuthenticationMiddleware:
     def __init__(
         self,
         app: ASGIApp,
-        authenticators: list[Authenticator],
+        authenticators: t.List[Authenticator],
         on_failure: t.Literal['raise', 'redirect', 'do_nothing'] = "do_nothing",
         redirect_to: str = "/",
-        exclude: list[t.Union[str, t.Pattern]] = None,
+        exclude: t.List[t.Union[str, t.Pattern]] = None,
     ) -> None:
         self._app = app
         self._authenticators = authenticators

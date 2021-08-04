@@ -1,6 +1,8 @@
 import dataclasses
 from dataclasses import dataclass
 
+import typing as t
+
 from imia import InMemoryProvider
 
 
@@ -8,7 +10,7 @@ from imia import InMemoryProvider
 class User:
     identifier = 'root@localhost'
     password = 'pa$$word'
-    scopes: list[str] = dataclasses.field(default=list)
+    scopes: t.List[str] = dataclasses.field(default=list)
 
     def get_display_name(self):
         return 'Root'
