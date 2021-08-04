@@ -140,11 +140,11 @@ class UserProvider(abc.ABC):  # pragma: no cover
     These classes are consumed by Authenticator instances
     and are not designed to be a part of login or logout process."""
 
-    async def find_by_identifier(self, identifier: object) -> t.Optional[UserLike]:
+    async def find_by_id(self, identifier: object) -> t.Optional[UserLike]:
         """Look up a user by ID."""
         raise NotImplementedError()
 
-    async def find_by_identity(self, identity: object) -> t.Optional[UserLike]:
+    async def find_by_username(self, username_or_email: object) -> t.Optional[UserLike]:
         """Look up a user by it's identity. Where identity may be an email address, or username."""
         raise NotImplementedError()
 
@@ -159,11 +159,11 @@ class InMemoryProvider(UserProvider):
     def __init__(self, user_map: dict[str, UserLike]) -> None:
         self.user_map = user_map
 
-    async def find_by_identifier(self, identifier: str) -> t.Optional[UserLike]:
+    async def find_by_id(self, identifier: str) -> t.Optional[UserLike]:
         return self.user_map.get(identifier)
 
-    async def find_by_identity(self, identity: str) -> t.Optional[UserLike]:
-        return self.user_map.get(identity)
+    async def find_by_username(self, username_or_email: str) -> t.Optional[UserLike]:
+        return self.user_map.get(username_or_email)
 
     async def find_by_token(self, token: str) -> t.Optional[UserLike]:
         return self.user_map.get(token)
@@ -201,11 +201,13 @@ class BasicAuthenticator(Authenticator):
         except ValueError:
             return None
 
-        user = await self.users.find_by_identity(username)
+        user = await self.users.find_by_username(username)
         if not user:
             return None
+
         if self.password_verifier.verify(password, user.get_hashed_password()):
             return user
+
         return None
 
 
@@ -214,6 +216,13 @@ class SessionAuthenticator(Authenticator):
 
     def __init__(self, users: UserProvider) -> None:
         self.users = users
+
+    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+        user_id = get_session_auth_id(connection)
+        if user_id is None:
+            return None
+
+        return await self.users.find_by_id(user_id)
 
 
 class TokenAuthenticator(Authenticator):
@@ -322,12 +331,12 @@ class AuthenticationMiddleware:
         await self._app(scope, receive, send)
 
 
-def get_session_auth_id(requset: Request) -> t.Optional[str]:
-    return requset.session.get(SESSION_KEY)
+def get_session_auth_id(connection: HTTPConnection) -> t.Optional[str]:
+    return connection.session.get(SESSION_KEY)
 
 
-def get_session_auth_hash(request: Request) -> t.Optional[str]:
-    return request.session.get(SESSION_HASH)
+def get_session_auth_hash(connection: HTTPConnection) -> t.Optional[str]:
+    return connection.session.get(SESSION_HASH)
 
 
 def update_session_auth_hash(request: Request, user: UserLike, secret_key: str) -> None:
@@ -393,7 +402,7 @@ class LoginManager:
         self._secret_key = secret_key
 
     async def login(self, request: Request, username: str, password: str) -> UserToken:
-        user = await self._user_provider.find_by_identity(username)
+        user = await self._user_provider.find_by_username(username)
         if user is not None and self._password_verifier.verify(password, user.get_hashed_password()):
             return await login_user(request, user, self._secret_key)
         return UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)

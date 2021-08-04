@@ -1,24 +1,12 @@
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from imia import AuthenticationMiddleware, BasicAuthenticator, LoginManager, SessionAuthenticator
+from imia import AuthenticationMiddleware, BasicAuthenticator
 from tests.conftest import inmemory_user_provider, password_verifier
-
-
-async def login_view(request: Request):
-    form_data = await request.form()
-    email = form_data.get('email')
-    password = form_data.get('password')
-    login_manager = LoginManager(inmemory_user_provider, password_verifier)
-    user_token = await login_manager.login(request, email, password)
-    if user_token:
-        return RedirectResponse('/app')
-    return RedirectResponse('/login?error=1')
 
 
 async def app_view(request: Request):
@@ -95,9 +83,3 @@ def test_basic_authentication_with_invalid_user():
     test_client = TestClient(app)
     response = test_client.get('/app', auth=('missing@localhost', 'password'))
     assert response.json()['is_authenticated'] is False
-
-
-def test_token_authentication(): ...
-
-
-def test_bearer_authentication(): ...
