@@ -1,6 +1,6 @@
 # Imia
 
-Imia (belarussian for "a name") is an authentication library for Starlette and FastAPI (python 3.7+).
+Imia (belarussian for "a name") is an authentication library for Starlette and FastAPI (python 3.8+).
 
 ![PyPI](https://img.shields.io/pypi/v/imia)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/alex-oleshkevich/imia/Lint)
