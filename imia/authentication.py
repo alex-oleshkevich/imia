@@ -229,11 +229,24 @@ class TokenAuthenticator(Authenticator):
     """Token authenticator reads Authorization header
     to obtain an API token and load a user using it."""
 
-    token_type: str = None
+    token_name: str = None
 
-    def __init__(self, users: UserProvider, token_type: str) -> None:
+    def __init__(self, users: UserProvider, token_name: str) -> None:
         self.users = users
-        self.token_type = token_type or self.token_type
+        self.token_name = token_name or self.token_name
+
+    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+        header = connection.headers.get('authorization')
+        if not header:
+            return None
+        try:
+            token_name, token_value = header.split(' ')
+        except ValueError:
+            return None
+        else:
+            if token_name != self.token_name:
+                return None
+            return await self.users.find_by_token(token_value)
 
 
 class BearerAuthenticator(Authenticator):
