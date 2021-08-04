@@ -34,8 +34,9 @@ poetry add imia
     - redirect to an URL
     - raise an exception
     - do nothing
-- Remember me
-- User Impersonation
+- [WIP] Remember me
+- [WIP] User Impersonation
+- [WIP] Two-Factory flow
 
 ## Quick start
 
