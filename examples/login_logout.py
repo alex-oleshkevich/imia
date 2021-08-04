@@ -1,6 +1,7 @@
 import dataclasses
 from dataclasses import dataclass
 
+from passlib.hash import pbkdf2_sha1
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -8,13 +9,14 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.routing import Route
 
-from imia import AuthenticationMiddleware, ImpersonationMiddleware, InMemoryProvider, LoginManager, SessionAuthenticator
+from imia import AuthenticationMiddleware, InMemoryProvider, LoginManager, SessionAuthenticator
 
 
 @dataclass
 class User:
+    """This is our user model. Any user model must implement UserLike protocol."""
     identifier: str = 'root@localhost'
-    password: str = 'pa$$word'
+    password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
     scopes: list[str] = dataclasses.field(default=list)
 
     def get_display_name(self):
@@ -30,26 +32,26 @@ class User:
         return self.scopes
 
 
-class UnsafePasswordVerifier:
-    def verify(self, plain: str, hashed: str) -> bool:
-        return plain == hashed
-
-
 secret_key = 'key!'
-user_provider = InMemoryProvider({
-    'root@localhost': User()
-})
+"""For security!"""
 
-password_verifier = UnsafePasswordVerifier()
+user_provider = InMemoryProvider({'root@localhost': User()})
+"""The class that looks up for a user. you may provide your own for, eg. database user lookup"""
+
+password_verifier = pbkdf2_sha1
+"""Password checking tool. Password checkers must match PasswordVerifier protocol."""
 
 login_manager = LoginManager(user_provider, password_verifier, secret_key)
+"""This is the core class of login/logout flow"""
 
 
 def index_view(request: Request) -> HTMLResponse:
+    """Display welcome page."""
     return HTMLResponse("""<a href="/login">Login</a> | <a href="/app">App</a>""")
 
 
 async def login_view(request: Request):
+    """Display login page  and handle login POST request."""
     error = ''
     if 'error' in request.query_params:
         error = '<span style="color:red">invalid credentials</span>'
@@ -73,6 +75,7 @@ async def login_view(request: Request):
 
 
 async def logout_view(request: Request) -> RedirectResponse:
+    """Handle logout request."""
     if request.method == 'POST':
         login_manager.logout(request)
         return RedirectResponse('/login', status_code=302)
@@ -80,6 +83,7 @@ async def logout_view(request: Request) -> RedirectResponse:
 
 
 async def app_view(request: Request) -> HTMLResponse:
+    """This is our protected area. Only authorized users allowed."""
     user = request.auth.display_name
     return HTMLResponse(
         """
@@ -104,6 +108,7 @@ app = Starlette(
         Middleware(
             AuthenticationMiddleware, authenticators=[SessionAuthenticator(user_provider)],
             on_failure='redirect', redirect_to='/login', exclude=[r'login', r'\/$']
+            # unprotect "/" and "/login" paths. Redirect all unauthenticated to "/login" on other routes.
         ),
     ],
 )

@@ -444,6 +444,8 @@ class LoginManager:
         return UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)
 
     def logout(self, request: Request) -> None:
-        request.session.pop(SESSION_KEY, None)
-        request.session.pop(SESSION_HASH, None)
+        request.session.clear()
+        if hasattr(request.session, 'regenerate_id'):
+            request.session.regenerate_id()
+
         request.scope['auth'] = UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)
