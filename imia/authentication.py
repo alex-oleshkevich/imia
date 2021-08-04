@@ -1,9 +1,26 @@
 import abc
 import enum
+import hashlib
+import hmac
+import secrets
 import typing as t
 
-from kupala.types import ASGIApp
-from kupala.requests import Request
+from asgiref.typing import ASGIApplication as ASGIApp
+
+SESSION_KEY = '_auth_user_id'
+SESSION_HASH = '_auth_user_hash'
+HASHING_ALGORITHM = 'sha1'
+
+
+class _State(t.Protocol):
+    def __getattr__(self, item: str) -> t.Any: ...
+
+    def __setattr__(self, item: str, value: t.Any) -> t.Any: ...
+
+
+class Request(t.Protocol):
+    session: t.MutableMapping
+    state: _State
 
 
 class AuthenticationError(Exception):
@@ -22,19 +39,29 @@ class InactiveUserError(AuthenticationError):
     """Raised when the user account is inactive."""
 
 
+class SessionReusageError(AuthenticationError):
+    """Raise when another user tries to reuse other user session."""
+
+
+class PasswordVerifier(t.Protocol):
+    def verify(self, plain: str, hashed: str) -> bool: ...
+
+
 class LoginState(enum.Enum):
     ANONYMOUS = "ANONYMOUS"
     IMPERSONATOR = "IMPERSONATOR"
     REMEMBERED = "REMEMBERED"
-    FULLY_AUTHENTICATED = "FULLY_AUTHENTICATED"
+    FRESH = "FRESH"
 
 
 class UserLike(t.Protocol):
-    def get_identifier(self) -> t.Any:
-        ...
+    def get_display_name(self) -> str: ...
 
-    def get_scopes(self) -> list[str]:
-        ...
+    def get_identifier(self) -> t.Any: ...
+
+    def get_raw_password(self) -> str: ...
+
+    def get_scopes(self) -> list[str]: ...
 
 
 class UserToken:
@@ -73,12 +100,39 @@ class UserToken:
         return self._user
 
     @property
+    def display_name(self) -> str:
+        return self.user.get_display_name()
+
+    @property
     def state(self) -> LoginState:
         return self._state
 
     @property
     def original_user(self) -> UserLike:
         return self._original_user
+
+    def __bool__(self) -> bool:
+        return self.is_authenticated
+
+    def __str__(self) -> str:
+        return self.display_name
+
+    def __contains__(self, item: str) -> bool:
+        return item in self.scopes
+
+
+class AnonymousUser:
+    def get_display_name(self) -> str:
+        return 'Anonymous'
+
+    def get_identifier(self) -> t.Any:
+        return None
+
+    def get_raw_password(self) -> str:
+        return ''
+
+    def get_scopes(self) -> list[str]:
+        return []
 
 
 class UserProvider(abc.ABC):
@@ -105,10 +159,10 @@ class InMemoryProvider(UserProvider):
     def __init__(self, user_map: dict[str, UserLike]) -> None:
         self.user_map = user_map
 
-    async def find_by_identifier(self, identifier: object) -> t.Optional[UserLike]:
+    async def find_by_identifier(self, identifier: str) -> t.Optional[UserLike]:
         return self.user_map.get(identifier)
 
-    async def find_by_identity(self, identity: object) -> t.Optional[UserLike]:
+    async def find_by_identity(self, identity: str) -> t.Optional[UserLike]:
         return self.user_map.get(identity)
 
     async def find_by_token(self, token: str) -> t.Optional[UserLike]:
@@ -208,33 +262,83 @@ class AuthenticationMiddleware:
         pass
 
 
+def get_session_auth_id(requset: Request) -> t.Optional[str]:
+    return requset.session.get(SESSION_KEY)
+
+
+def get_session_auth_hash(request: Request) -> t.Optional[str]:
+    return request.session.get(SESSION_HASH)
+
+
+def update_session_auth_hash(request: Request, user: UserLike, secret_key: str) -> None:
+    """Update current session's SESSION_HASH key.
+    Call this function in your password reset form otherwise you will be logged out."""
+    if hasattr(request.session, 'regenerate_id'):
+        request.session.regenerate_id()
+    request.session[SESSION_HASH] = _get_password_hmac_from_user(user, secret_key)
+
+
+def _get_password_hmac_from_user(user: UserLike, secret: str) -> str:
+    """Generate HMAC value for user's password."""
+    key = "imia.session.hash" + secret
+    key = hashlib.sha256(key.encode()).digest()
+    return hmac.new(key, msg=user.get_raw_password().encode(), digestmod=hashlib.sha1).hexdigest()
+
+
+def _check_for_other_user_session(request: Request, user: UserLike, user_password_hmac: str) -> None:
+    """There is a chance that session may already contain data of another user.
+    This may happen if you don't clear session property on logout, or SESSION_KEY is set from the outside.
+    In this case we need to run several security checks to ensure that SESSION_KEY is valid.
+
+    Our plan:
+        * if SESSION_KEY and ID of current user is not the same -> risk of session re-usage
+        * if session hash is not the same as hash for user's password then we clearly reusing other's session.
+    """
+    session_auth_hmac = get_session_auth_hash(request)
+    if SESSION_KEY in request.session and any([
+        # if we have other user id in the session
+        request.session[SESSION_KEY] != str(user.get_identifier()),
+        # and session has previously set hash, and hashes are not equal
+        session_auth_hmac and not secrets.compare_digest(session_auth_hmac, user_password_hmac),
+    ]):
+        # probably this is the session of another user -> clear
+        raise SessionReusageError()
+
+
+async def login_user(request: Request, user: UserLike, secret_key: str) -> UserToken:
+    """Login a user w/o password check."""
+    user_password_hmac = _get_password_hmac_from_user(user, secret_key)
+    try:
+        _check_for_other_user_session(request, user, user_password_hmac)
+    except SessionReusageError:
+        request.session.clear()
+    else:
+        if hasattr(request.session, 'regenerate_id'):
+            # if session implements `def regenerate_id(self) -> str` then call it
+            await request.session.regenerate_id()
+
+    user_token = UserToken(user=user, scopes=user.get_scopes(), state=LoginState.FRESH)
+    request.session[SESSION_KEY] = str(user.get_identifier())
+    request.session[SESSION_HASH] = user_password_hmac
+    request.state.user_token = user_token
+    return user_token
+
+
 class LoginManager:
     """Use this class to handle login and logout forms."""
 
-    def authenticate(self, request: Request) -> t.Optional[UserToken]:
-        pass
+    def __init__(self, user_provider: UserProvider, password_verifier: PasswordVerifier, secret_key: str = '') -> None:
+        self._user_provider = user_provider
+        self._password_verifier = password_verifier
+        self._secret_key = secret_key
 
-    def login(
-        self, request: Request, identity: str, credential: str
-    ) -> t.Optional[UserToken]:
-        """
-        find user in the db
-        check password
-        write id to session
-        regenerate csrf token
-        check session key and regen session if token is used (see django.contrib.auth.login)
-        """
-
-    def set_user(self, request: Request, user: UserLike) -> None:
-        pass
+    async def login(self, request: Request, username: str, password: str) -> UserToken:
+        user = await self._user_provider.find_by_identity(username)
+        if user is not None and self._password_verifier.verify(password, user.get_raw_password()):
+            return await login_user(request, user, self._secret_key)
+        return UserToken(user=AnonymousUser(), scopes=[], state=LoginState.ANONYMOUS)
 
     def logout(self, request: Request) -> None:
-        pass
-
-
-async def login(request: Request, identity: str, credential: str) -> UserToken:
-    return LoginManager().login(request, identity, credential)
-
-
-async def logout(request: Request):
-    return LoginManager().logout(request)
+        request.session.pop(SESSION_KEY, None)
+        request.session.pop(SESSION_HASH, None)
+        request.state.user_token = UserToken(user=AnonymousUser(), scopes=[], state=LoginState.ANONYMOUS)
