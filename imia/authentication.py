@@ -69,11 +69,11 @@ class UserToken:
         self,
         user: UserLike,
         state: LoginState,
-        original_user: UserLike = None,
+        original_user_id: t.Any = None,
     ) -> None:
         self._user = user
         self._state = state
-        self._original_user = original_user
+        self._original_user_id = original_user_id
 
     @property
     def is_authenticated(self) -> bool:
@@ -107,10 +107,6 @@ class UserToken:
     def state(self) -> LoginState:
         return self._state
 
-    @property
-    def original_user(self) -> UserLike:
-        return self._original_user
-
     def __bool__(self) -> bool:
         return self.is_authenticated
 
@@ -140,11 +136,11 @@ class UserProvider(abc.ABC):  # pragma: no cover
     These classes are consumed by Authenticator instances
     and are not designed to be a part of login or logout process."""
 
-    async def find_by_id(self, identifier: object) -> t.Optional[UserLike]:
+    async def find_by_id(self, identifier: t.Any) -> t.Optional[UserLike]:
         """Look up a user by ID."""
         raise NotImplementedError()
 
-    async def find_by_username(self, username_or_email: object) -> t.Optional[UserLike]:
+    async def find_by_username(self, username_or_email: str) -> t.Optional[UserLike]:
         """Look up a user by it's identity. Where identity may be an email address, or username."""
         raise NotImplementedError()
 
@@ -192,7 +188,7 @@ class BasicAuthenticator(Authenticator):
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         header = connection.headers.get('authorization')
         if not header or not header.lower().startswith('basic'):
-            return
+            return None
 
         try:
             username, password = base64.b64decode(header[6:]).decode().split(':')
@@ -229,11 +225,9 @@ class TokenAuthenticator(Authenticator):
     """Token authenticator reads Authorization header
     to obtain an API token and load a user using it."""
 
-    token_name: str = None
-
     def __init__(self, users: UserProvider, token_name: str) -> None:
         self.users = users
-        self.token_name = token_name or self.token_name
+        self.token_name = token_name
 
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         header = connection.headers.get('authorization')
@@ -379,18 +373,17 @@ def update_session_auth_hash(request: Request, user: UserLike, secret_key: str) 
     """Update current session's SESSION_HASH key.
     Call this function in your password reset form otherwise you will be logged out."""
     if hasattr(request.session, 'regenerate_id'):
-        request.session.regenerate_id()
+        request.session.regenerate_id()  # type: ignore
     request.session[SESSION_HASH] = _get_password_hmac_from_user(user, secret_key)
 
 
 def _get_password_hmac_from_user(user: UserLike, secret: str) -> str:
     """Generate HMAC value for user's password."""
-    key = "imia.session.hash" + secret
-    key = hashlib.sha256(key.encode()).digest()
+    key = hashlib.sha256(("imia.session.hash" + secret).encode()).digest()
     return hmac.new(key, msg=user.get_hashed_password().encode(), digestmod=hashlib.sha1).hexdigest()
 
 
-def _check_for_other_user_session(request: Request, user: UserLike, user_password_hmac: str) -> None:
+def _check_for_other_user_session(connection: HTTPConnection, user: UserLike, user_password_hmac: str) -> None:
     """There is a chance that session may already contain data of another user.
     This may happen if you don't clear session property on logout, or SESSION_KEY is set from the outside.
     In this case we need to run several security checks to ensure that SESSION_KEY is valid.
@@ -399,10 +392,10 @@ def _check_for_other_user_session(request: Request, user: UserLike, user_passwor
         * if SESSION_KEY and ID of current user is not the same -> risk of session re-usage
         * if session hash is not the same as hash for user's password then we clearly reusing other's session.
     """
-    session_auth_hmac = get_session_auth_hash(request)
-    if SESSION_KEY in request.session and any([
+    session_auth_hmac = get_session_auth_hash(connection)
+    if SESSION_KEY in connection.session and any([
         # if we have other user id in the session
-        request.session[SESSION_KEY] != str(user.get_identifier()),
+        connection.session[SESSION_KEY] != str(user.get_identifier()),
         # and session has previously set hash, and hashes are not equal
         session_auth_hmac and not secrets.compare_digest(session_auth_hmac, user_password_hmac),
     ]):
@@ -410,7 +403,7 @@ def _check_for_other_user_session(request: Request, user: UserLike, user_passwor
         raise SessionReusageError()
 
 
-async def login_user(request: Request, user: UserLike, secret_key: str) -> UserToken:
+async def login_user(request: HTTPConnection, user: UserLike, secret_key: str) -> UserToken:
     """Login a user w/o password check."""
     user_password_hmac = _get_password_hmac_from_user(user, secret_key)
     try:
@@ -420,7 +413,7 @@ async def login_user(request: Request, user: UserLike, secret_key: str) -> UserT
     else:
         if hasattr(request.session, 'regenerate_id'):
             # if session implements `def regenerate_id(self) -> str` then call it
-            await request.session.regenerate_id()
+            await request.session.regenerate_id()  # type: ignore
 
     user_token = UserToken(user=user, state=LoginState.FRESH)
     request.session[SESSION_KEY] = str(user.get_identifier())
@@ -437,15 +430,15 @@ class LoginManager:
         self._password_verifier = password_verifier
         self._secret_key = secret_key
 
-    async def login(self, request: Request, username: str, password: str) -> UserToken:
+    async def login(self, request: HTTPConnection, username: str, password: str) -> UserToken:
         user = await self._user_provider.find_by_username(username)
         if user is not None and self._password_verifier.verify(password, user.get_hashed_password()):
             return await login_user(request, user, self._secret_key)
         return UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)
 
-    def logout(self, request: Request) -> None:
+    def logout(self, request: HTTPConnection) -> None:
         request.session.clear()
         if hasattr(request.session, 'regenerate_id'):
-            request.session.regenerate_id()
+            request.session.regenerate_id()  # type: ignore
 
         request.scope['auth'] = UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)
