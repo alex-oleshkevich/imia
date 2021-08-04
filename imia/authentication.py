@@ -315,7 +315,7 @@ class AuthenticationMiddleware:
         self,
         app: ASGIApp,
         authenticators: t.List[Authenticator],
-        on_failure: t.Literal['raise', 'redirect', 'do_nothing'] = "do_nothing",
+        on_failure: str = "do_nothing",  # one of: raise, redirect, do_nothing
         redirect_to: str = "/",
         exclude: t.List[t.Union[str, t.Pattern]] = None,
     ) -> None:
