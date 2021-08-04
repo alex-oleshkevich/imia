@@ -1,26 +1,24 @@
 import abc
+import base64
 import enum
 import hashlib
 import hmac
+import re
 import secrets
 import typing as t
 
-from asgiref.typing import ASGIApplication as ASGIApp
+from starlette.requests import HTTPConnection
+from starlette.responses import RedirectResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 SESSION_KEY = '_auth_user_id'
 SESSION_HASH = '_auth_user_hash'
 HASHING_ALGORITHM = 'sha1'
 
 
-class _State(t.Protocol):
-    def __getattr__(self, item: str) -> t.Any: ...
-
-    def __setattr__(self, item: str, value: t.Any) -> t.Any: ...
-
-
 class Request(t.Protocol):
     session: t.MutableMapping
-    state: _State
+    scope: t.MutableMapping
 
 
 class AuthenticationError(Exception):
@@ -43,7 +41,7 @@ class SessionReusageError(AuthenticationError):
     """Raise when another user tries to reuse other user session."""
 
 
-class PasswordVerifier(t.Protocol):
+class PasswordVerifier(t.Protocol):  # pragma: no cover
     def verify(self, plain: str, hashed: str) -> bool: ...
 
 
@@ -54,12 +52,12 @@ class LoginState(enum.Enum):
     FRESH = "FRESH"
 
 
-class UserLike(t.Protocol):
+class UserLike(t.Protocol):  # pragma: no cover
     def get_display_name(self) -> str: ...
 
     def get_identifier(self) -> t.Any: ...
 
-    def get_raw_password(self) -> str: ...
+    def get_hashed_password(self) -> str: ...
 
     def get_scopes(self) -> list[str]: ...
 
@@ -70,12 +68,10 @@ class UserToken:
     def __init__(
         self,
         user: UserLike,
-        scopes: list[str],
         state: LoginState,
         original_user: UserLike = None,
     ) -> None:
         self._user = user
-        self._scopes = scopes or []
         self._state = state
         self._original_user = original_user
 
@@ -93,7 +89,11 @@ class UserToken:
 
     @property
     def scopes(self) -> list[str]:
-        return self._scopes
+        return self.user.get_scopes()
+
+    @property
+    def identity(self) -> t.Any:
+        return self.user.get_identifier()
 
     @property
     def user(self) -> UserLike:
@@ -128,14 +128,14 @@ class AnonymousUser:
     def get_identifier(self) -> t.Any:
         return None
 
-    def get_raw_password(self) -> str:
+    def get_hashed_password(self) -> str:
         return ''
 
     def get_scopes(self) -> list[str]:
         return []
 
 
-class UserProvider(abc.ABC):
+class UserProvider(abc.ABC):  # pragma: no cover
     """User provides perform user look ups over data storages.
     These classes are consumed by Authenticator instances
     and are not designed to be a part of login or logout process."""
@@ -169,7 +169,7 @@ class InMemoryProvider(UserProvider):
         return self.user_map.get(token)
 
 
-class Authenticator(abc.ABC):
+class Authenticator(abc.ABC):  # pragma: no cover
     """Authenticators load user using request data.
     For example, an authenticate may use session to get user's ID
     and load user instance from a user provider.
@@ -178,15 +178,35 @@ class Authenticator(abc.ABC):
     Authenticators are part of AuthenticationMiddleware.
     """
 
-    async def authenticate(self, request: Request) -> t.Optional[UserToken]:
+    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         raise NotImplementedError()
 
 
 class BasicAuthenticator(Authenticator):
     """Basic authenticator supports WWW-Basic authentication type."""
 
-    def __init__(self, users: UserProvider) -> None:
+    def __init__(self, users: UserProvider, password_verifier: PasswordVerifier) -> None:
         self.users = users
+        self.password_verifier = password_verifier
+
+    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+        header = connection.headers.get('authorization')
+        if not header or not header.lower().startswith('basic'):
+            return
+
+        try:
+            username, password = base64.b64decode(header[6:]).decode().split(':')
+            if password == '':
+                raise ValueError('Empty password.')
+        except ValueError:
+            return None
+
+        user = await self.users.find_by_identity(username)
+        if not user:
+            return None
+        if self.password_verifier.verify(password, user.get_hashed_password()):
+            return user
+        return None
 
 
 class SessionAuthenticator(Authenticator):
@@ -255,11 +275,51 @@ class AuthenticationMiddleware:
         self,
         app: ASGIApp,
         authenticators: list[Authenticator],
-        on_failure: str = "raise",
+        on_failure: t.Literal['raise', 'redirect', 'do_nothing'] = "do_nothing",
         redirect_to: str = "/",
-        exclude: list[str] = None,
+        exclude: list[t.Union[str, t.Pattern]] = None,
     ) -> None:
-        pass
+        self._app = app
+        self._authenticators = authenticators
+        self._on_failure = on_failure
+        self._redirect_to = redirect_to
+        self._exclude = exclude
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ["http", "websocket"]:
+            await self._app(scope, receive, send)
+            return
+
+        request = HTTPConnection(scope)
+        if self._exclude:
+            for pattern in self._exclude:
+                if re.match(pattern, str(request.url)):
+                    return await self._app(scope, receive, send)
+
+        user: t.Optional[UserLike] = None
+        for authenticator in self._authenticators:
+            user = await authenticator.authenticate(request)
+            if user: break
+
+        scope['auth'] = UserToken(AnonymousUser(), LoginState.ANONYMOUS)
+        if user:
+            scope['auth'] = UserToken(user=user, state=LoginState.FRESH)
+        elif self._on_failure == 'raise':
+            raise AuthenticationError('Could not authenticate request.')
+        elif self._on_failure == 'redirect':
+            if self._on_failure is None:
+                raise ValueError(
+                    'redirect_to attribute of AuthenticationMiddleware cannot be None '
+                    'if on_failure is set to "redirect".'
+                )
+            response = RedirectResponse(self._redirect_to)
+            return await response(scope, receive, send)
+        elif self._on_failure != 'do_nothing':
+            raise ValueError(
+                'Unsupported action passed to AuthenticationMiddleware via on_failure argument: '
+                '%s' % self._on_failure
+            )
+        await self._app(scope, receive, send)
 
 
 def get_session_auth_id(requset: Request) -> t.Optional[str]:
@@ -282,7 +342,7 @@ def _get_password_hmac_from_user(user: UserLike, secret: str) -> str:
     """Generate HMAC value for user's password."""
     key = "imia.session.hash" + secret
     key = hashlib.sha256(key.encode()).digest()
-    return hmac.new(key, msg=user.get_raw_password().encode(), digestmod=hashlib.sha1).hexdigest()
+    return hmac.new(key, msg=user.get_hashed_password().encode(), digestmod=hashlib.sha1).hexdigest()
 
 
 def _check_for_other_user_session(request: Request, user: UserLike, user_password_hmac: str) -> None:
@@ -317,10 +377,10 @@ async def login_user(request: Request, user: UserLike, secret_key: str) -> UserT
             # if session implements `def regenerate_id(self) -> str` then call it
             await request.session.regenerate_id()
 
-    user_token = UserToken(user=user, scopes=user.get_scopes(), state=LoginState.FRESH)
+    user_token = UserToken(user=user, state=LoginState.FRESH)
     request.session[SESSION_KEY] = str(user.get_identifier())
     request.session[SESSION_HASH] = user_password_hmac
-    request.state.user_token = user_token
+    request.scope['auth'] = user_token
     return user_token
 
 
@@ -334,11 +394,11 @@ class LoginManager:
 
     async def login(self, request: Request, username: str, password: str) -> UserToken:
         user = await self._user_provider.find_by_identity(username)
-        if user is not None and self._password_verifier.verify(password, user.get_raw_password()):
+        if user is not None and self._password_verifier.verify(password, user.get_hashed_password()):
             return await login_user(request, user, self._secret_key)
-        return UserToken(user=AnonymousUser(), scopes=[], state=LoginState.ANONYMOUS)
+        return UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)
 
     def logout(self, request: Request) -> None:
         request.session.pop(SESSION_KEY, None)
         request.session.pop(SESSION_HASH, None)
-        request.state.user_token = UserToken(user=AnonymousUser(), scopes=[], state=LoginState.ANONYMOUS)
+        request.scope['auth'] = UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)

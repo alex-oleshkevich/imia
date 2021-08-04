@@ -1,4 +1,3 @@
-import dataclasses
 from dataclasses import dataclass
 
 import pytest
@@ -11,43 +10,13 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 from starsessions import InMemoryBackend, SessionMiddleware as StarSessionMiddleware
 
-from imia import get_session_auth_id, InMemoryProvider, login_user, LoginManager
-
-
-class UnsafePasswordVerifier:
-    def verify(self, plain: str, hashed: str) -> bool:
-        return plain == hashed
-
-
-@dataclass
-class User:
-    identifier = 'root@localhost'
-    password = 'pa$$word'
-    scopes: list[str] = dataclasses.field(default=list)
-
-    def get_display_name(self):
-        return 'User'
-
-    def get_identifier(self):
-        return self.identifier
-
-    def get_raw_password(self):
-        return self.password
-
-    def get_scopes(self):
-        return self.scopes
+from imia import get_session_auth_id, login_user, LoginManager
+from tests.conftest import inmemory_user_provider, password_verifier, User
 
 
 @dataclass
 class Attacker(User):
     password = 'hackit'
-
-
-inmemory_user_provider = InMemoryProvider({
-    'root@localhost': User(),
-})
-
-password_verifier = UnsafePasswordVerifier()
 
 
 def index_view(request: Request):
