@@ -249,13 +249,34 @@ class TokenAuthenticator(Authenticator):
             return await self.users.find_by_token(token_value)
 
 
-class BearerAuthenticator(Authenticator):
+class BearerAuthenticator(TokenAuthenticator):
     """Bearer authenticator is a subtype of TokenAuthenticator designed for Bearer token types."""
 
-    token_type = "Bearer"
-
     def __init__(self, users: UserProvider) -> None:
+        super().__init__(users, 'Bearer')
+
+
+class APIKeyAuthenticator(Authenticator):
+    """API key is a simple way to use token authentication.
+    The basic principle is to read token from query params, and fallback to headers if none found."""
+
+    def __init__(self, users: UserProvider, query_param: str = 'apikey', header_name: str = 'X-Api-Key'):
         self.users = users
+        self.query_param = query_param
+        self.header_name = header_name
+
+    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+        token = self._get_token_from_query_params(connection)
+        token = token or self._get_token_from_header(connection)
+        if token:
+            return await self.users.find_by_token(token)
+        return None
+
+    def _get_token_from_query_params(self, connection: HTTPConnection) -> t.Optional[str]:
+        return connection.query_params.get(self.query_param)
+
+    def _get_token_from_header(self, connection: HTTPConnection) -> t.Optional[str]:
+        return connection.headers.get(self.header_name)
 
 
 def impersonate(request: Request, user: UserLike) -> None:
