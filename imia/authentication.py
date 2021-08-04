@@ -329,14 +329,17 @@ class AuthenticationMiddleware:
         self._exclude = exclude
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] not in ["http", "websocket"]:
+        if scope["type"] not in ["http", "websocket"]:  # pragma: no cover
             await self._app(scope, receive, send)
             return
+
+        # always populate scope['auth']
+        scope['auth'] = UserToken(AnonymousUser(), LoginState.ANONYMOUS)
 
         request = HTTPConnection(scope)
         if self._exclude:
             for pattern in self._exclude:
-                if re.match(pattern, str(request.url)):
+                if re.search(pattern, str(request.url)):
                     return await self._app(scope, receive, send)
 
         user: t.Optional[UserLike] = None
@@ -344,13 +347,12 @@ class AuthenticationMiddleware:
             user = await authenticator.authenticate(request)
             if user: break
 
-        scope['auth'] = UserToken(AnonymousUser(), LoginState.ANONYMOUS)
         if user:
             scope['auth'] = UserToken(user=user, state=LoginState.FRESH)
         elif self._on_failure == 'raise':
             raise AuthenticationError('Could not authenticate request.')
         elif self._on_failure == 'redirect':
-            if self._on_failure is None:
+            if self._redirect_to is None:
                 raise ValueError(
                     'redirect_to attribute of AuthenticationMiddleware cannot be None '
                     'if on_failure is set to "redirect".'
@@ -360,7 +362,7 @@ class AuthenticationMiddleware:
         elif self._on_failure != 'do_nothing':
             raise ValueError(
                 'Unsupported action passed to AuthenticationMiddleware via on_failure argument: '
-                '%s' % self._on_failure
+                '%s.' % self._on_failure
             )
         await self._app(scope, receive, send)
 
