@@ -71,16 +71,15 @@ def test_middleware_redirect():
 
 
 def test_middleware_redirect_requires_url():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ], on_failure='redirect', redirect_to=None),
-    ])
-    test_client = TestClient(app)
-
     with pytest.raises(ValueError) as ex:
+        app = Starlette(debug=True, routes=[
+            Route('/app', app_view, methods=['GET']),
+        ], middleware=[
+            Middleware(AuthenticationMiddleware, authenticators=[
+                APIKeyAuthenticator(users=inmemory_user_provider),
+            ], on_failure='redirect', redirect_to=None),
+        ])
+        test_client = TestClient(app)
         test_client.get('/app?apikey=invalid@localhost', allow_redirects=False)
     assert str(ex.value) == (
         'redirect_to attribute of AuthenticationMiddleware cannot be None '

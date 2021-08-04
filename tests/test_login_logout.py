@@ -38,7 +38,7 @@ async def login_view(request: Request):
 
 async def logout_view(request: Request):
     login_manager = LoginManager(inmemory_user_provider, password_verifier)
-    login_manager.logout(request)
+    await login_manager.logout(request)
     return RedirectResponse('/login')
 
 

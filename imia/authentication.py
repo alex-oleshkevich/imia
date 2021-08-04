@@ -42,7 +42,8 @@ class SessionReusageError(AuthenticationError):
 
 
 class PasswordVerifier(t.Protocol):  # pragma: no cover
-    def verify(self, plain: str, hashed: str) -> bool: ...
+    def verify(self, plain: str, hashed: str) -> bool:
+        ...
 
 
 class LoginState(enum.Enum):
@@ -53,17 +54,21 @@ class LoginState(enum.Enum):
 
 
 class UserLike(t.Protocol):  # pragma: no cover
-    def get_display_name(self) -> str: ...
+    def get_display_name(self) -> str:
+        ...
 
-    def get_identifier(self) -> t.Any: ...
+    def get_identifier(self) -> t.Any:
+        ...
 
-    def get_hashed_password(self) -> str: ...
+    def get_hashed_password(self) -> str:
+        ...
 
-    def get_scopes(self) -> list[str]: ...
+    def get_scopes(self) -> list[str]:
+        ...
 
 
 class UserToken:
-    __slots__ = ["_user", "_scopes", "_state", "_original_user"]
+    __slots__ = ["_user", "_scopes", "_state"]
 
     def __init__(
         self,
@@ -73,7 +78,6 @@ class UserToken:
     ) -> None:
         self._user = user
         self._state = state
-        self._original_user_id = original_user_id
 
     @property
     def is_authenticated(self) -> bool:
@@ -320,7 +324,13 @@ class AuthenticationMiddleware:
         self._authenticators = authenticators
         self._on_failure = on_failure
         self._redirect_to = redirect_to
-        self._exclude = exclude
+        self._exclude = exclude or []
+
+        if on_failure == 'redirect' and redirect_to is None:
+            raise ValueError(
+                'redirect_to attribute of AuthenticationMiddleware cannot be None '
+                'if on_failure is set to "redirect".'
+            )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] not in ["http", "websocket"]:  # pragma: no cover
@@ -331,26 +341,21 @@ class AuthenticationMiddleware:
         scope['auth'] = UserToken(AnonymousUser(), LoginState.ANONYMOUS)
 
         request = HTTPConnection(scope)
-        if self._exclude:
-            for pattern in self._exclude:
-                if re.search(pattern, str(request.url)):
-                    return await self._app(scope, receive, send)
+        for pattern in self._exclude:
+            if re.search(pattern, str(request.url)):
+                return await self._app(scope, receive, send)
 
         user: t.Optional[UserLike] = None
         for authenticator in self._authenticators:
             user = await authenticator.authenticate(request)
-            if user: break
+            if user:
+                break
 
         if user:
             scope['auth'] = UserToken(user=user, state=LoginState.FRESH)
         elif self._on_failure == 'raise':
             raise AuthenticationError('Could not authenticate request.')
         elif self._on_failure == 'redirect':
-            if self._redirect_to is None:
-                raise ValueError(
-                    'redirect_to attribute of AuthenticationMiddleware cannot be None '
-                    'if on_failure is set to "redirect".'
-                )
             response = RedirectResponse(self._redirect_to)
             return await response(scope, receive, send)
         elif self._on_failure != 'do_nothing':
@@ -369,11 +374,11 @@ def get_session_auth_hash(connection: HTTPConnection) -> t.Optional[str]:
     return connection.session.get(SESSION_HASH)
 
 
-def update_session_auth_hash(request: Request, user: UserLike, secret_key: str) -> None:
+async def update_session_auth_hash(request: Request, user: UserLike, secret_key: str) -> None:
     """Update current session's SESSION_HASH key.
     Call this function in your password reset form otherwise you will be logged out."""
     if hasattr(request.session, 'regenerate_id'):
-        request.session.regenerate_id()  # type: ignore
+        await request.session.regenerate_id()  # type: ignore
     request.session[SESSION_HASH] = _get_password_hmac_from_user(user, secret_key)
 
 
@@ -393,12 +398,14 @@ def _check_for_other_user_session(connection: HTTPConnection, user: UserLike, us
         * if session hash is not the same as hash for user's password then we clearly reusing other's session.
     """
     session_auth_hmac = get_session_auth_hash(connection)
-    if SESSION_KEY in connection.session and any([
-        # if we have other user id in the session
-        connection.session[SESSION_KEY] != str(user.get_identifier()),
-        # and session has previously set hash, and hashes are not equal
-        session_auth_hmac and not secrets.compare_digest(session_auth_hmac, user_password_hmac),
-    ]):
+    if SESSION_KEY in connection.session and any(
+        [
+            # if we have other user id in the session
+            connection.session[SESSION_KEY] != str(user.get_identifier()),
+            # and session has previously set hash, and hashes are not equal
+            session_auth_hmac and not secrets.compare_digest(session_auth_hmac, user_password_hmac),
+        ]
+    ):
         # probably this is the session of another user -> clear
         raise SessionReusageError()
 
@@ -436,9 +443,9 @@ class LoginManager:
             return await login_user(request, user, self._secret_key)
         return UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)
 
-    def logout(self, request: HTTPConnection) -> None:
+    async def logout(self, request: HTTPConnection) -> None:
         request.session.clear()
         if hasattr(request.session, 'regenerate_id'):
-            request.session.regenerate_id()  # type: ignore
+            await request.session.regenerate_id()  # type: ignore
 
         request.scope['auth'] = UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)

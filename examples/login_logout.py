@@ -77,7 +77,7 @@ async def login_view(request: Request):
 async def logout_view(request: Request) -> RedirectResponse:
     """Handle logout request."""
     if request.method == 'POST':
-        login_manager.logout(request)
+        await login_manager.logout(request)
         return RedirectResponse('/login', status_code=302)
     return RedirectResponse('/app', status_code=302)
 
