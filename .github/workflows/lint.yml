@@ -33,7 +33,7 @@ jobs:
 
             - name: Lint with flake8
               run: |
-                  flake8 imia tests
+                  flake8 imia/ tests
 
             - name: Lint with mypy
               run: |

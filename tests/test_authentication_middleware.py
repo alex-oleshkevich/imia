@@ -6,27 +6,38 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from imia import APIKeyAuthenticator, AuthenticationError, AuthenticationMiddleware, BasicAuthenticator
-from tests.conftest import inmemory_user_provider, password_verifier
+from imia import APIKeyAuthenticator, AuthenticationError, AuthenticationMiddleware
+from tests.conftest import inmemory_user_provider
 
 
 async def app_view(request: Request):
-    return JSONResponse({
-        'is_authenticated': request.auth.is_authenticated,
-        'user_id': request.auth.identity,
-        'user_name': request.auth.display_name,
-    })
+    return JSONResponse(
+        {
+            'is_authenticated': request.auth.is_authenticated,
+            'user_id': request.auth.identity,
+            'user_name': request.auth.display_name,
+        }
+    )
 
 
 def test_middleware_ignores_url_patterns():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-        Route('/app2', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ], on_failure='raise', exclude=[r'app2']),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+            Route('/app2', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+                on_failure='raise',
+                exclude=[r'app2'],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost')
     assert response.json()['is_authenticated'] is True
@@ -37,13 +48,21 @@ def test_middleware_ignores_url_patterns():
 
 
 def test_middleware_mode_raises():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ], on_failure='raise'),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+                on_failure='raise',
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost')
     assert response.json()['is_authenticated'] is True
@@ -54,13 +73,23 @@ def test_middleware_mode_raises():
 
 
 def test_middleware_redirect():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ], on_failure='redirect', redirect_to='/login', exclude=['login']),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+                on_failure='redirect',
+                redirect_to='/login',
+                exclude=['login'],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost')
     assert response.json()['is_authenticated'] is True
@@ -72,29 +101,45 @@ def test_middleware_redirect():
 
 def test_middleware_redirect_requires_url():
     with pytest.raises(ValueError) as ex:
-        app = Starlette(debug=True, routes=[
-            Route('/app', app_view, methods=['GET']),
-        ], middleware=[
-            Middleware(AuthenticationMiddleware, authenticators=[
-                APIKeyAuthenticator(users=inmemory_user_provider),
-            ], on_failure='redirect', redirect_to=None),
-        ])
+        app = Starlette(
+            debug=True,
+            routes=[
+                Route('/app', app_view, methods=['GET']),
+            ],
+            middleware=[
+                Middleware(
+                    AuthenticationMiddleware,
+                    authenticators=[
+                        APIKeyAuthenticator(users=inmemory_user_provider),
+                    ],
+                    on_failure='redirect',
+                    redirect_to=None,
+                ),
+            ],
+        )
         test_client = TestClient(app)
         test_client.get('/app?apikey=invalid@localhost', allow_redirects=False)
     assert str(ex.value) == (
-        'redirect_to attribute of AuthenticationMiddleware cannot be None '
-        'if on_failure is set to "redirect".'
+        'redirect_to attribute of AuthenticationMiddleware cannot be None ' 'if on_failure is set to "redirect".'
     )
 
 
 def test_middleware_does_nothing():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ], on_failure='do_nothing'),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+                on_failure='do_nothing',
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost')
     assert response.json()['is_authenticated'] is True
@@ -104,13 +149,21 @@ def test_middleware_does_nothing():
 
 
 def test_middleware_unsupported_action():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ], on_failure='unknown'),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+                on_failure='unknown',
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost')
     assert response.json()['is_authenticated'] is True
@@ -118,6 +171,4 @@ def test_middleware_unsupported_action():
     with pytest.raises(ValueError) as ex:
         response = test_client.get('/app?apikey=invalid@localhost')
         assert response.json()['is_authenticated'] is False
-    assert str(ex.value) == (
-        'Unsupported action passed to AuthenticationMiddleware via on_failure argument: unknown.'
-    )
+    assert str(ex.value) == ('Unsupported action passed to AuthenticationMiddleware via on_failure argument: unknown.')

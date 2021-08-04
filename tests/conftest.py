@@ -28,7 +28,9 @@ class UnsafePasswordVerifier:
         return plain == hashed
 
 
-inmemory_user_provider = InMemoryProvider({
-    'root@localhost': User(),
-})
+inmemory_user_provider = InMemoryProvider(
+    {
+        'root@localhost': User(),
+    }
+)
 password_verifier = UnsafePasswordVerifier()

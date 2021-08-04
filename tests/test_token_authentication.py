@@ -10,21 +10,30 @@ from tests.conftest import inmemory_user_provider
 
 
 async def app_view(request: Request):
-    return JSONResponse({
-        'is_authenticated': request.auth.is_authenticated,
-        'user_id': request.auth.identity,
-        'user_name': request.auth.display_name,
-    })
+    return JSONResponse(
+        {
+            'is_authenticated': request.auth.is_authenticated,
+            'user_id': request.auth.identity,
+            'user_name': request.auth.display_name,
+        }
+    )
 
 
 def test_token_authentication():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'authorization': 'Token root@localhost'})
     assert response.json()['is_authenticated'] is True
@@ -33,26 +42,40 @@ def test_token_authentication():
 
 
 def test_token_authentication_with_invalid_token():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'authorization': 'Token invalid@localhost'})
     assert response.json()['is_authenticated'] is False
 
 
 def test_token_authentication_with_invalid_token_string():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'authorization': 'Token'})
     assert response.json()['is_authenticated'] is False
@@ -65,13 +88,20 @@ def test_token_authentication_with_invalid_token_string():
 
 
 def test_bearer_authentication():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            BearerAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    BearerAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'authorization': 'Bearer root@localhost'})
     assert response.json()['is_authenticated'] is True
@@ -80,13 +110,20 @@ def test_bearer_authentication():
 
 
 def test_bearer_authentication_with_invalid_token():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            BearerAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    BearerAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'authorization': 'Bearer invalid@localhost'})
     assert response.json()['is_authenticated'] is False

@@ -5,26 +5,35 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from imia import APIKeyAuthenticator, AuthenticationMiddleware, BasicAuthenticator
-from tests.conftest import inmemory_user_provider, password_verifier
+from imia import APIKeyAuthenticator, AuthenticationMiddleware
+from tests.conftest import inmemory_user_provider
 
 
 async def app_view(request: Request):
-    return JSONResponse({
-        'is_authenticated': request.auth.is_authenticated,
-        'user_id': request.auth.identity,
-        'user_name': request.auth.display_name,
-    })
+    return JSONResponse(
+        {
+            'is_authenticated': request.auth.is_authenticated,
+            'user_id': request.auth.identity,
+            'user_name': request.auth.display_name,
+        }
+    )
 
 
 def test_apikey_authentication():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost')
     assert response.json()['is_authenticated'] is True
@@ -33,13 +42,20 @@ def test_apikey_authentication():
 
 
 def test_apikey_authentication_with_invalid_user():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=invalid@localhost')
     assert response.json()['is_authenticated'] is False
@@ -49,13 +65,20 @@ def test_apikey_authentication_with_invalid_user():
 
 
 def test_apikey_authentication_using_header():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'X-API-Key': 'root@localhost'})
     assert response.json()['is_authenticated'] is True
@@ -64,26 +87,40 @@ def test_apikey_authentication_using_header():
 
 
 def test_apikey_query_params_have_higher_precedense():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app?apikey=root@localhost', headers={'X-API-Key': 'invalid@localhost'})
     assert response.json()['is_authenticated'] is True
 
 
 def test_apikey_with_missing_token():
-    app = Starlette(debug=True, routes=[
-        Route('/app', app_view, methods=['GET']),
-    ], middleware=[
-        Middleware(AuthenticationMiddleware, authenticators=[
-            APIKeyAuthenticator(users=inmemory_user_provider),
-        ]),
-    ])
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/app', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+            ),
+        ],
+    )
     test_client = TestClient(app)
     response = test_client.get('/app', headers={'X-API-Key': ''})
     assert response.json()['is_authenticated'] is False

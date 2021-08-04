@@ -43,9 +43,7 @@ async def logout_view(request: Request):
 
 
 async def app_view(request: Request):
-    return JSONResponse({
-        'session_auth_id': get_session_auth_id(request)
-    })
+    return JSONResponse({'session_auth_id': get_session_auth_id(request)})
 
 
 async def set_user_view(request: Request):
@@ -64,29 +62,37 @@ async def session_view(request: Request):
     return JSONResponse(dict(request.session))
 
 
-app = Starlette(debug=True, routes=[
-    Route('/', index_view),
-    Route('/login', login_view, methods=['POST']),
-    Route('/logout', logout_view, methods=['POST']),
-    Route('/app', app_view),
-    Route('/attack', set_attacker_view),
-    Route('/user', set_user_view),
-    Route('/session', session_view),
-], middleware=[
-    Middleware(SessionMiddleware, secret_key='key!'),
-])
+app = Starlette(
+    debug=True,
+    routes=[
+        Route('/', index_view),
+        Route('/login', login_view, methods=['POST']),
+        Route('/logout', logout_view, methods=['POST']),
+        Route('/app', app_view),
+        Route('/attack', set_attacker_view),
+        Route('/user', set_user_view),
+        Route('/session', session_view),
+    ],
+    middleware=[
+        Middleware(SessionMiddleware, secret_key='key!'),
+    ],
+)
 
-app2 = Starlette(debug=True, routes=[
-    Route('/', index_view),
-    Route('/login', login_view, methods=['POST']),
-    Route('/logout', logout_view, methods=['POST']),
-    Route('/app', app_view),
-    Route('/attack', set_attacker_view),
-    Route('/user', set_user_view),
-    Route('/session', session_view),
-], middleware=[
-    Middleware(StarSessionMiddleware, secret_key='key!', autoload=True, backend=InMemoryBackend()),
-])
+app2 = Starlette(
+    debug=True,
+    routes=[
+        Route('/', index_view),
+        Route('/login', login_view, methods=['POST']),
+        Route('/logout', logout_view, methods=['POST']),
+        Route('/app', app_view),
+        Route('/attack', set_attacker_view),
+        Route('/user', set_user_view),
+        Route('/session', session_view),
+    ],
+    middleware=[
+        Middleware(StarSessionMiddleware, secret_key='key!', autoload=True, backend=InMemoryBackend()),
+    ],
+)
 
 
 @pytest.mark.parametrize('app', [app, app2])
