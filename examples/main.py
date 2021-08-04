@@ -23,7 +23,7 @@ class User:
     def get_identifier(self):
         return self.identifier
 
-    def get_raw_password(self):
+    def get_hashed_password(self):
         return self.password
 
     def get_scopes(self):

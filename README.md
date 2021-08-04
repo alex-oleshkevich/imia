@@ -1,6 +1,6 @@
 # Imia
 
-Full stack authentication library for ASGI.
+Imia (belarussian for "a name") is an authentication library for Starlette and FastAPI.
 
 ![PyPI](https://img.shields.io/pypi/v/imia)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/alex-oleshkevich/imia/Lint)
@@ -22,7 +22,20 @@ poetry add imia
 
 ## Features
 
--   TODO
+- Login/logout flows
+- Pluggable authenticators:
+    - WWW-Basic
+    - session
+    - token
+    - bearer token
+    - any token (customizable)
+    - API key
+- Authentication middleware with fallback strategies (when it cannot authenticate user):
+    - redirect to an URL
+    - raise an exception
+    - do nothing
+- Remember me
+- User Impersonation
 
 ## Quick start
 
