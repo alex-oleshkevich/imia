@@ -21,6 +21,6 @@ class UserLike(t.Protocol):  # pragma: no cover_
         ...
 
 
-class Authenticator(t.Protocol):
+class Authenticator(t.Protocol):  # pragma: no cover_
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         ...
