@@ -15,6 +15,7 @@ from imia import AuthenticationMiddleware, InMemoryProvider, LoginManager, Sessi
 @dataclass
 class User:
     """This is our user model. Any user model must implement UserLike protocol."""
+
     identifier: str = 'root@localhost'
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
     scopes: list[str] = dataclasses.field(default=list)
@@ -64,14 +65,17 @@ async def login_view(request: Request):
         if user_token:
             return RedirectResponse('/app', status_code=302)
         return RedirectResponse('/login?error=invalid_credentials', status_code=302)
-    return HTMLResponse("""
+    return HTMLResponse(
+        """
     %s
     <form method="post">
     <label>email <input name="email" value="root@localhost"></label>
     <label>password <input name="password" type="password" value="pa$$word"></label>
     <button type="submit">submit</button>
     </form>
-    """ % error)
+    """
+        % error
+    )
 
 
 async def logout_view(request: Request) -> RedirectResponse:
@@ -91,7 +95,8 @@ async def app_view(request: Request) -> HTMLResponse:
         <form action="/logout" method="post">
         <button>logout</button>
         </form>
-        """ % user
+        """
+        % user
     )
 
 
@@ -106,9 +111,12 @@ app = Starlette(
     middleware=[
         Middleware(SessionMiddleware, secret_key=secret_key),
         Middleware(
-            AuthenticationMiddleware, authenticators=[SessionAuthenticator(user_provider)],
-            on_failure='redirect', redirect_to='/login', exclude=[r'login', r'\/$']
-            # unprotect "/" and "/login" paths. Redirect all unauthenticated to "/login" on other routes.
+            AuthenticationMiddleware,
+            authenticators=[SessionAuthenticator(user_provider)],
+            on_failure='redirect',
+            redirect_to='/login',
+            include_patterns=[r'\/app']
+            # protect /app path
         ),
     ],
 )
