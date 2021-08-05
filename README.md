@@ -39,7 +39,6 @@ poetry add imia
     - with optional URL protection
     - with option URL exclusion from protection
 - User Impersonation (stateless and stateful)
-- [WIP] Remember me
 
 ## Quick start
 
