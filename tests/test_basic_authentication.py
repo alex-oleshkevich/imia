@@ -99,7 +99,7 @@ def test_basic_authentication_without_credentials():
     )
     test_client = TestClient(app)
     response = test_client.get('/app')
-    assert response.json()['is_authenticated'] is False
+    assert 'www-authenticate' in response.headers
 
 
 def test_basic_authentication_with_invalid_user():

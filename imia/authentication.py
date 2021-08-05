@@ -5,7 +5,7 @@ import base64
 import re
 import typing as t
 from starlette.requests import HTTPConnection
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .exceptions import AuthenticationError
@@ -13,6 +13,10 @@ from .login import get_session_auth_id
 from .protocols import PasswordVerifier, UserLike
 from .user_providers import UserProvider
 from .user_token import AnonymousUser, LoginState, UserToken
+
+
+class WWWAuthenticationRequiredError(Exception):
+    pass
 
 
 class BaseAuthenticator(abc.ABC):  # pragma: no cover
@@ -27,18 +31,27 @@ class BaseAuthenticator(abc.ABC):  # pragma: no cover
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         raise NotImplementedError()
 
+    def get_auth_header(self) -> t.Optional[str]:
+        return None
+
 
 class HTTPBasicAuthenticator(BaseAuthenticator):
     """Basic authenticator supports WWW-Basic authentication type."""
 
-    def __init__(self, user_provider: UserProvider, password_verifier: PasswordVerifier) -> None:
+    def __init__(
+        self,
+        user_provider: UserProvider,
+        password_verifier: PasswordVerifier,
+        realm: str = 'Protected access',
+    ) -> None:
         self.user_provider = user_provider
         self.password_verifier = password_verifier
+        self.realm = realm
 
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         header = connection.headers.get('authorization')
         if not header or not header.lower().startswith('basic'):
-            return None
+            raise WWWAuthenticationRequiredError()
 
         try:
             username, password = base64.b64decode(header[6:]).decode().split(':')
@@ -55,6 +68,9 @@ class HTTPBasicAuthenticator(BaseAuthenticator):
             return user
 
         return None
+
+    def get_auth_header(self) -> t.Optional[str]:
+        return 'Basic realm="%s"' % self.realm
 
 
 class SessionAuthenticator(BaseAuthenticator):
@@ -167,9 +183,15 @@ class AuthenticationMiddleware:
 
         user: t.Optional[UserLike] = None
         for authenticator in self._authenticators:
-            user = await authenticator.authenticate(request)
-            if user:
-                break
+            try:
+                user = await authenticator.authenticate(request)
+                if user:
+                    break
+            except WWWAuthenticationRequiredError:
+                auth_header = authenticator.get_auth_header()
+                if auth_header:
+                    response = Response(None, headers={'WWW-Authenticate': auth_header}, status_code=401)
+                    return await response(scope, receive, send)
 
         if user:
             scope['auth'] = UserToken(user=user, state=LoginState.FRESH)

@@ -24,3 +24,6 @@ class UserLike(t.Protocol):  # pragma: no cover_
 class Authenticator(t.Protocol):  # pragma: no cover_
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         ...
+
+    def get_auth_header(self) -> t.Optional[str]:
+        ...
