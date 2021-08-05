@@ -99,7 +99,7 @@ class UserToken:
         return not self.is_authenticated
 
     @property
-    def impersonated_user_id(self) -> t.Optional[t.Any]:
+    def original_user_id(self) -> t.Optional[t.Any]:
         """Get ID of user being impersonated."""
         return self.original_user_token.user.get_id() if self.original_user_token else None
 
@@ -192,7 +192,12 @@ class InMemoryProvider(UserProvider):
         return self.user_map.get(token)
 
 
-class Authenticator(abc.ABC):  # pragma: no cover
+class Authenticator(t.Protocol):
+    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+        ...
+
+
+class BaseAuthenticator(abc.ABC):  # pragma: no cover
     """Authenticators load user using request data.
     For example, an authenticate may use session to get user's ID
     and load user instance from a user provider.
@@ -205,11 +210,11 @@ class Authenticator(abc.ABC):  # pragma: no cover
         raise NotImplementedError()
 
 
-class BasicAuthenticator(Authenticator):
+class HTTPBasicAuthenticator(BaseAuthenticator):
     """Basic authenticator supports WWW-Basic authentication type."""
 
-    def __init__(self, users: UserProvider, password_verifier: PasswordVerifier) -> None:
-        self.users = users
+    def __init__(self, user_provider: UserProvider, password_verifier: PasswordVerifier) -> None:
+        self.user_provider = user_provider
         self.password_verifier = password_verifier
 
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
@@ -224,7 +229,7 @@ class BasicAuthenticator(Authenticator):
         except ValueError:
             return None
 
-        user = await self.users.find_by_username(username)
+        user = await self.user_provider.find_by_username(username)
         if not user:
             return None
 
@@ -234,26 +239,26 @@ class BasicAuthenticator(Authenticator):
         return None
 
 
-class SessionAuthenticator(Authenticator):
+class SessionAuthenticator(BaseAuthenticator):
     """Session authenticator will use session to get an ID of a user."""
 
-    def __init__(self, users: UserProvider) -> None:
-        self.users = users
+    def __init__(self, user_provider: UserProvider) -> None:
+        self.user_provider = user_provider
 
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         user_id = get_session_auth_id(connection)
         if user_id is None:
             return None
 
-        return await self.users.find_by_id(user_id)
+        return await self.user_provider.find_by_id(user_id)
 
 
-class TokenAuthenticator(Authenticator):
+class TokenAuthenticator(BaseAuthenticator):
     """Token authenticator reads Authorization header
     to obtain an API token and load a user using it."""
 
-    def __init__(self, users: UserProvider, token_name: str) -> None:
-        self.users = users
+    def __init__(self, user_provider: UserProvider, token_name: str) -> None:
+        self.user_provider = user_provider
         self.token_name = token_name
 
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
@@ -267,22 +272,22 @@ class TokenAuthenticator(Authenticator):
         else:
             if token_name != self.token_name:
                 return None
-            return await self.users.find_by_token(token_value)
+            return await self.user_provider.find_by_token(token_value)
 
 
 class BearerAuthenticator(TokenAuthenticator):
     """Bearer authenticator is a subtype of TokenAuthenticator designed for Bearer token types."""
 
-    def __init__(self, users: UserProvider) -> None:
-        super().__init__(users, 'Bearer')
+    def __init__(self, user_provider: UserProvider) -> None:
+        super().__init__(user_provider, 'Bearer')
 
 
-class APIKeyAuthenticator(Authenticator):
+class APIKeyAuthenticator(BaseAuthenticator):
     """API key is a simple way to use token authentication.
     The basic principle is to read token from query params, and fallback to headers if none found."""
 
-    def __init__(self, users: UserProvider, query_param: str = 'apikey', header_name: str = 'X-Api-Key'):
-        self.users = users
+    def __init__(self, user_provider: UserProvider, query_param: str = 'apikey', header_name: str = 'X-Api-Key'):
+        self.user_provider = user_provider
         self.query_param = query_param
         self.header_name = header_name
 
@@ -290,7 +295,7 @@ class APIKeyAuthenticator(Authenticator):
         token = self._get_token_from_query_params(connection)
         token = token or self._get_token_from_header(connection)
         if token:
-            return await self.users.find_by_token(token)
+            return await self.user_provider.find_by_token(token)
         return None
 
     def _get_token_from_query_params(self, connection: HTTPConnection) -> t.Optional[str]:
@@ -314,7 +319,7 @@ def exit_impersonation(request: HTTPConnection) -> None:
 
 
 def impersonation_is_active(request: HTTPConnection) -> bool:
-    return request.scope['auth'].impersonated_user_id is not None
+    return request.scope['auth'].original_user_id is not None
 
 
 def get_original_user(request: HTTPConnection) -> UserLike:
@@ -416,7 +421,7 @@ class AuthenticationMiddleware:
     def __init__(
         self,
         app: ASGIApp,
-        authenticators: t.List[Authenticator],
+        authenticators: t.List[BaseAuthenticator],
         on_failure: str = "do_nothing",  # one of: raise, redirect, do_nothing
         redirect_to: str = "/",
         exclude_patterns: t.List[t.Union[str, t.Pattern]] = None,

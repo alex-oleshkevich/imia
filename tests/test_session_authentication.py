@@ -43,7 +43,7 @@ def test_session_authentication():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    SessionAuthenticator(users=inmemory_user_provider),
+                    SessionAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],
@@ -74,7 +74,7 @@ def test_session_authentication_with_missing_user():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    SessionAuthenticator(users=inmemory_user_provider),
+                    SessionAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],

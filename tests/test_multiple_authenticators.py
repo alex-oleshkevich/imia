@@ -29,8 +29,8 @@ def test_authenticates_successfully():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
-                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
+                    TokenAuthenticator(user_provider=inmemory_user_provider, token_name='Token'),
                 ],
             ),
         ],
@@ -53,8 +53,8 @@ def test_not_authenticates():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
-                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
+                    TokenAuthenticator(user_provider=inmemory_user_provider, token_name='Token'),
                 ],
             ),
         ],

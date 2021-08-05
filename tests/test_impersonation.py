@@ -30,7 +30,7 @@ async def app_view(request: Request):
             'is_authenticated': request.auth.is_authenticated,
             'user_id': request.auth.user_id,
             'user_name': request.auth.display_name,
-            'target_user': request.auth.impersonated_user_id,
+            'target_user': request.auth.original_user_id,
         }
     )
 

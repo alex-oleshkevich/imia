@@ -29,7 +29,7 @@ def test_apikey_authentication():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],
@@ -51,7 +51,7 @@ def test_apikey_authentication_with_invalid_user():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],
@@ -74,7 +74,7 @@ def test_apikey_authentication_using_header():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],
@@ -96,7 +96,7 @@ def test_apikey_query_params_have_higher_precedense():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],
@@ -116,7 +116,7 @@ def test_apikey_with_missing_token():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],

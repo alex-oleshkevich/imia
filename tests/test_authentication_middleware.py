@@ -31,7 +31,7 @@ def test_middleware_ignores_url_patterns():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
                 on_failure='raise',
                 exclude_patterns=[r'app2'],
@@ -59,7 +59,7 @@ def test_middleware_protects_only_specific_url_patterns():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
                 on_failure='raise',
                 include_patterns=['/app2'],
@@ -91,7 +91,7 @@ def test_middleware_mode_raises():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
                 on_failure='raise',
             ),
@@ -116,7 +116,7 @@ def test_middleware_redirect():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
                 on_failure='redirect',
                 redirect_to='/login',
@@ -144,7 +144,7 @@ def test_middleware_redirect_requires_url():
                 Middleware(
                     AuthenticationMiddleware,
                     authenticators=[
-                        APIKeyAuthenticator(users=inmemory_user_provider),
+                        APIKeyAuthenticator(user_provider=inmemory_user_provider),
                     ],
                     on_failure='redirect',
                     redirect_to=None,
@@ -168,7 +168,7 @@ def test_middleware_does_nothing():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
                 on_failure='do_nothing',
             ),
@@ -192,7 +192,7 @@ def test_middleware_unsupported_action():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    APIKeyAuthenticator(users=inmemory_user_provider),
+                    APIKeyAuthenticator(user_provider=inmemory_user_provider),
                 ],
                 on_failure='unknown',
             ),
@@ -219,7 +219,7 @@ def test_middleware_raises_if_both_include_and_exclude_patterns_passed():
                 Middleware(
                     AuthenticationMiddleware,
                     authenticators=[
-                        APIKeyAuthenticator(users=inmemory_user_provider),
+                        APIKeyAuthenticator(user_provider=inmemory_user_provider),
                     ],
                     on_failure='raise',
                     include_patterns=[],

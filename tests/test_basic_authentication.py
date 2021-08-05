@@ -5,7 +5,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from imia import AuthenticationMiddleware, BasicAuthenticator
+from imia import AuthenticationMiddleware, HTTPBasicAuthenticator
 from tests.conftest import inmemory_user_provider, password_verifier
 
 
@@ -30,7 +30,7 @@ def test_basic_authentication():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BasicAuthenticator(users=inmemory_user_provider, password_verifier=password_verifier),
+                    HTTPBasicAuthenticator(user_provider=inmemory_user_provider, password_verifier=password_verifier),
                 ],
             ),
         ],
@@ -52,7 +52,7 @@ def test_basic_authentication_with_invalid_password():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BasicAuthenticator(users=inmemory_user_provider, password_verifier=password_verifier),
+                    HTTPBasicAuthenticator(user_provider=inmemory_user_provider, password_verifier=password_verifier),
                 ],
             ),
         ],
@@ -72,7 +72,7 @@ def test_basic_authentication_with_empty_password():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BasicAuthenticator(users=inmemory_user_provider, password_verifier=password_verifier),
+                    HTTPBasicAuthenticator(user_provider=inmemory_user_provider, password_verifier=password_verifier),
                 ],
             ),
         ],
@@ -92,7 +92,7 @@ def test_basic_authentication_without_credentials():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BasicAuthenticator(users=inmemory_user_provider, password_verifier=password_verifier),
+                    HTTPBasicAuthenticator(user_provider=inmemory_user_provider, password_verifier=password_verifier),
                 ],
             ),
         ],
@@ -112,7 +112,7 @@ def test_basic_authentication_with_invalid_user():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BasicAuthenticator(users=inmemory_user_provider, password_verifier=password_verifier),
+                    HTTPBasicAuthenticator(user_provider=inmemory_user_provider, password_verifier=password_verifier),
                 ],
             ),
         ],

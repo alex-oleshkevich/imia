@@ -29,7 +29,7 @@ def test_token_authentication():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                    TokenAuthenticator(user_provider=inmemory_user_provider, token_name='Token'),
                 ],
             ),
         ],
@@ -51,7 +51,7 @@ def test_token_authentication_with_invalid_token():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                    TokenAuthenticator(user_provider=inmemory_user_provider, token_name='Token'),
                 ],
             ),
         ],
@@ -71,7 +71,7 @@ def test_token_authentication_with_invalid_token_string():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    TokenAuthenticator(users=inmemory_user_provider, token_name='Token'),
+                    TokenAuthenticator(user_provider=inmemory_user_provider, token_name='Token'),
                 ],
             ),
         ],
@@ -97,7 +97,7 @@ def test_bearer_authentication():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BearerAuthenticator(users=inmemory_user_provider),
+                    BearerAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],
@@ -119,7 +119,7 @@ def test_bearer_authentication_with_invalid_token():
             Middleware(
                 AuthenticationMiddleware,
                 authenticators=[
-                    BearerAuthenticator(users=inmemory_user_provider),
+                    BearerAuthenticator(user_provider=inmemory_user_provider),
                 ],
             ),
         ],

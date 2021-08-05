@@ -30,6 +30,7 @@ poetry add imia
     - bearer token
     - any token (customizable)
     - API key
+- Database agnostic user storage
 - Authentication middleware
     - with fallback strategies:
         - redirect to an URL
@@ -43,4 +44,18 @@ poetry add imia
 
 ## Quick start
 
-See example application in `examples/` directory of this repository.
+If you are too lazy to read this doc, take a look into `examples/` directory. There you will find several files demoing
+various parts of this library.
+
+## Docs
+
+1. [Configuration](docs/configuration.md)
+2. [Login/Logout flow](docs/login_logout.md)
+3. [User token](docs/user_token.md)
+4. [Request authentication](docs/authentication.md)
+5. [Authenticators](docs/authenticators.md)
+6. [User impersontation](docs/impersonation.md)
+
+## Usage
+
+See [examples/](examples) directory.
