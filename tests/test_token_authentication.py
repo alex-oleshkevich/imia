@@ -80,6 +80,9 @@ def test_token_authentication_with_invalid_token_string():
     response = test_client.get('/app', headers={'authorization': 'Token'})
     assert response.json()['is_authenticated'] is False
 
+    response = test_client.get('/app', headers={'authorization': 'Bearer XXXXXX'})
+    assert response.json()['is_authenticated'] is False
+
     response = test_client.get('/app', headers={'authorization': 'root@localhost'})
     assert response.json()['is_authenticated'] is False
 

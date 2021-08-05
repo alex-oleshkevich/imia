@@ -63,7 +63,7 @@ use_parentheses = true
 [tool.coverage.run]
 branch = true
 source = ["imia"]
-omit = ["tests/*", ".venv/*", "*/__main__.py"]
+omit = ["tests/*", ".venv/*", "*/__main__.py", "examples/*"]
 
 [tool.coverage.report]
 exclude_lines = [

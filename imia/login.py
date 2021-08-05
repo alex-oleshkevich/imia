@@ -22,14 +22,6 @@ def get_session_auth_hash(connection: HTTPConnection) -> t.Optional[str]:
     return connection.session.get(SESSION_HASH)
 
 
-async def update_session_auth_hash(request: HTTPConnection, user: UserLike, secret_key: str) -> None:
-    """Update current session's SESSION_HASH key.
-    Call this function in your password reset form otherwise you will be logged out."""
-    if hasattr(request.session, 'regenerate_id'):
-        await request.session.regenerate_id()  # type: ignore
-    request.session[SESSION_HASH] = _get_password_hmac_from_user(user, secret_key)
-
-
 def _get_password_hmac_from_user(user: UserLike, secret: str) -> str:
     """Generate HMAC value for user's password."""
     key = hashlib.sha256(("imia.session.hash" + secret).encode()).digest()
