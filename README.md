@@ -40,7 +40,6 @@ poetry add imia
     - with option URL exclusion from protection
 - User Impersonation (stateless and stateful)
 - [WIP] Remember me
-- [WIP] Two-Factor flow
 
 ## Quick start
 
