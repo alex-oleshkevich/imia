@@ -65,7 +65,8 @@ Use `login_user` function to customize the login flow. If you go this direction,
 passwords. Once you got an user instance then call `login_user` to login.
 
 ```python
-from imia import login_user
+
+from login import login_user
 
 secret_key = 'key!'
 

@@ -46,7 +46,9 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from imia import APIKeyAuthenticator, AuthenticationMiddleware, ImpersonationMiddleware, InMemoryProvider,
+from imia import APIKeyAuthenticator, AuthenticationMiddleware,
+from user_providers import InMemoryProvider
+from impersonation import ImpersonationMiddleware
 
 
 @dataclasses.dataclass()

@@ -10,8 +10,8 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 from starsessions import InMemoryBackend, SessionMiddleware as StarSessionMiddleware
 
-from imia import get_session_auth_id, login_user, LoginManager
-from tests.conftest import inmemory_user_provider, password_verifier, User
+from imia import LoginManager, get_session_auth_id, login_user
+from tests.conftest import User, inmemory_user_provider, password_verifier
 
 
 @dataclass

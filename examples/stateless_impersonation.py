@@ -1,14 +1,16 @@
 import dataclasses
 from dataclasses import dataclass
 
+from impersonation import ImpersonationMiddleware
 from passlib.hash import pbkdf2_sha1
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from user_providers import InMemoryProvider
 
-from imia import APIKeyAuthenticator, AuthenticationMiddleware, ImpersonationMiddleware, InMemoryProvider, LoginManager
+from imia import APIKeyAuthenticator, AuthenticationMiddleware, LoginManager
 
 
 @dataclass

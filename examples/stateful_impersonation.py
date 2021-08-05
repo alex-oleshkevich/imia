@@ -1,6 +1,7 @@
 import dataclasses
 from dataclasses import dataclass
 
+from impersonation import ImpersonationMiddleware
 from passlib.hash import pbkdf2_sha1
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -8,8 +9,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.routing import Route
+from user_providers import InMemoryProvider
 
-from imia import AuthenticationMiddleware, ImpersonationMiddleware, InMemoryProvider, LoginManager, SessionAuthenticator
+from imia import AuthenticationMiddleware, LoginManager, SessionAuthenticator
 
 
 @dataclass

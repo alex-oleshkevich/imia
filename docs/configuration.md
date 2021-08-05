@@ -101,7 +101,7 @@ manager:
 ```python
 from passlib.hash import pbkdf2_sha1
 
-from imia import LoginManager
+from login import LoginManager
 
 login_manager = LoginManager(user_provider=None, password_verifier=pbkdf2_sha1)
 ```
