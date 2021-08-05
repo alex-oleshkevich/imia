@@ -30,12 +30,15 @@ poetry add imia
     - bearer token
     - any token (customizable)
     - API key
-- Authentication middleware with fallback strategies (when it cannot authenticate user):
-    - redirect to an URL
-    - raise an exception
-    - do nothing
+- Authentication middleware
+    - with fallback strategies:
+        - redirect to an URL
+        - raise an exception
+        - do nothing
+    - with optional URL protection
+    - with option URL exclusion from protection
+- User Impersonation (stateless and stateful)
 - [WIP] Remember me
-- [WIP] User Impersonation
 - [WIP] Two-Factory flow
 
 ## Quick start

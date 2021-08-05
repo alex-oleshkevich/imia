@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import base64
 import enum
@@ -13,6 +15,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 SESSION_KEY = '_auth_user_id'
 SESSION_HASH = '_auth_user_hash'
 HASHING_ALGORITHM = 'sha1'
+IMPERSONATION_SESSION_KEY = '_impersonated_user_id'
 
 
 class Request(t.Protocol):
@@ -30,6 +33,11 @@ class NotAuthenticatedError(AuthenticationError):
 
 class ImpersonationNotAllowedError(AuthenticationError):
     """Raised when the user is not allowed to perform impersonation."""
+
+
+class ImpersonationNotActiveError(AuthenticationError):
+    """Raised when you try to access impersonation related data
+    but the impersonation is not active."""
 
 
 class InactiveUserError(AuthenticationError):
@@ -67,57 +75,73 @@ class UserLike(t.Protocol):  # pragma: no cover_
 
 
 class UserToken:
-    __slots__ = ["_user", "_scopes", "_state"]
+    __slots__ = ["_user", "_state", 'original_user_token']
 
     def __init__(
         self,
         user: UserLike,
         state: LoginState,
-        original_user_id: t.Any = None,
+        original_user_token: UserToken = None,
     ) -> None:
         self._user = user
         self._state = state
+        self.original_user_token = original_user_token
 
     @property
     def is_authenticated(self) -> bool:
-        return self.state in [LoginState.REMEMBERED, LoginState.FRESH]
+        """Get authentication state.
+        Returns True is user is authenticated."""
+        return self.state != LoginState.ANONYMOUS
 
     @property
     def is_anonymous(self) -> bool:
+        """Test if current user is not authenticated (anonymous)."""
         return not self.is_authenticated
 
     @property
-    def is_impersonator(self) -> bool:
-        return self.state == LoginState.IMPERSONATOR
+    def impersonated_user_id(self) -> t.Optional[t.Any]:
+        """Get ID of user being impersonated."""
+        return self.original_user_token.user.get_identifier() if self.original_user_token else None
 
     @property
     def scopes(self) -> t.List[str]:
+        """Return permission scopes of current user.
+        Returns an empty list for unauthenticated user."""
         return self.user.get_scopes()
 
     @property
     def identity(self) -> t.Any:
+        """Get ID of current user."""
         return self.user.get_identifier()
 
     @property
     def user(self) -> UserLike:
+        """Get an user model associated"""
         return self._user
 
     @property
     def display_name(self) -> str:
+        """Get a display name of current user."""
         return self.user.get_display_name()
 
     @property
     def state(self) -> LoginState:
+        """Get a login state."""
         return self._state
 
     def __bool__(self) -> bool:
+        """Support if-like usage:
+        if user_token:
+            ...
+        """
         return self.is_authenticated
 
     def __str__(self) -> str:
         return self.display_name
 
-    def __contains__(self, item: str) -> bool:
-        return item in self.scopes
+    def __contains__(self, permission: str) -> bool:
+        """Check if permission is in scopes."""
+        return permission in self.scopes
 
 
 class AnonymousUser:
@@ -276,20 +300,30 @@ class APIKeyAuthenticator(Authenticator):
         return connection.headers.get(self.header_name)
 
 
-def impersonate(request: Request, user: UserLike) -> None:
+def impersonate(request: HTTPConnection, user: UserLike) -> None:
     """Activate impersonation."""
+    request.scope['auth'] = UserToken(user, state=LoginState.IMPERSONATOR, original_user_token=request.scope['auth'])
+    if 'session' in request.scope:
+        request.scope['session'][IMPERSONATION_SESSION_KEY] = user.get_identifier()
 
 
-def is_impersonator(request: Request) -> bool:
-    """Test if the impersonation is active."""
-
-
-def exit_impersonation(request: Request) -> None:
+def exit_impersonation(request: HTTPConnection) -> None:
     """Exit the impersonation session (restores to an original user)."""
+    if 'session' in request.scope:
+        del request.scope['session'][IMPERSONATION_SESSION_KEY]
 
 
-def get_original_user(request: Request) -> None:
+def impersonation_is_active(request: HTTPConnection) -> bool:
+    return request.scope['auth'].impersonated_user_id is not None
+
+
+def get_original_user(request: HTTPConnection) -> UserLike:
     """Get the original user when the impersonation is active."""
+    return (
+        request.scope['auth'].original_user_token.user
+        if request.scope['auth'].original_user_token
+        else request.scope['auth'].user
+    )
 
 
 class ImpersonationMiddleware:
@@ -299,11 +333,79 @@ class ImpersonationMiddleware:
         self,
         app: ASGIApp,
         user_provider: UserProvider,
-        query_param: str = "_impersonate",
-        exit_query_param: str = "__exit__",
-        header_name: str = "x-switch-user",
+        guard_fn: t.Callable[[UserToken, HTTPConnection], bool] = None,
+        enter_query_param: str = "_impersonate",
+        exit_user_name: str = "__exit__",
+        scope: str = 'auth:impersonate_others',
     ) -> None:
-        pass
+        self._app = app
+        self._user_provider = user_provider
+        self._guard_fn = guard_fn
+        self._enter_query_param = enter_query_param
+        self._exit_user_name = exit_user_name
+        self._scope = scope
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ["http", "websocket"]:  # pragma: no cover
+            await self._app(scope, receive, send)
+            return
+
+        request = HTTPConnection(scope)
+        action, impersonation_target = self._detect_action(request)
+        if action == 'ignore':
+            # user haven't asked anything we can offer
+            return await self._app(scope, receive, send)
+
+        if 'auth' not in request.scope:
+            raise ValueError('ImpersonationMiddleware needs AuthenticationMiddleware to be installed.')
+
+        if not self._can_enter_impersonation(request):
+            return await self._app(scope, receive, send)
+
+        if action == 'enter':
+            user_id = request.query_params[self._enter_query_param]
+            await self._enter_impersonation(request, user_id)
+
+        if action == 'exit':
+            await self._exit_impersonation(request)
+
+        if action == 'activate':
+            await self._enter_impersonation(request, impersonation_target)
+
+        await self._app(scope, receive, send)
+
+    async def _enter_impersonation(self, request: HTTPConnection, user_id: str) -> None:
+        user = await self._user_provider.find_by_id(user_id)
+        if user:
+            impersonate(request, user)
+
+    async def _exit_impersonation(self, request: HTTPConnection) -> None:
+        exit_impersonation(request)
+
+    def _can_enter_impersonation(self, request: HTTPConnection) -> bool:
+        """Test if current user can impersonate other.
+        Here are two checks. The first one to lookup a presence of self._scope in token scopes.
+        The other one is to provide guard functions that must return boolean value.
+        The guard function take the precedence when available."""
+        if self._guard_fn:
+            # forbid impersonation if guard function returns False
+            return self._guard_fn(request.auth, request)
+
+        # user must have "can_impersonate" scope
+        return self._scope in request.auth
+
+    def _detect_action(self, request: HTTPConnection) -> t.Tuple[str, str]:
+        username = request.query_params.get(self._enter_query_param)
+        if username is None:
+            impersonation_target = request.scope.get('session', {}).get(IMPERSONATION_SESSION_KEY)
+            if impersonation_target is not None:
+                return 'activate', impersonation_target
+            return 'ignore', ''
+
+        if username == self._exit_user_name:
+            return 'exit', ''
+
+        return 'enter', username
 
 
 class AuthenticationMiddleware:

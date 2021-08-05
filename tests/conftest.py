@@ -10,7 +10,8 @@ from imia import InMemoryProvider
 class User:
     identifier = 'root@localhost'
     password = 'pa$$word'
-    scopes: t.List[str] = dataclasses.field(default=list)
+    scopes: t.List[str] = dataclasses.field(default_factory=list)
+    name = 'Root'
 
     def get_display_name(self):
         return 'Root'
@@ -25,14 +26,24 @@ class User:
         return self.scopes
 
 
+@dataclass
+class CustomerUser(User):
+    identifier = 'customer@localhost'
+    name = 'Customer'
+
+
 class UnsafePasswordVerifier:
     def verify(self, plain: str, hashed: str) -> bool:
         return plain == hashed
 
 
+user = User()
+customer_user = CustomerUser()
+
 inmemory_user_provider = InMemoryProvider(
     {
-        'root@localhost': User(),
+        'root@localhost': user,
+        'customer@localhost': customer_user,
     }
 )
 password_verifier = UnsafePasswordVerifier()
