@@ -310,7 +310,7 @@ def impersonate(request: HTTPConnection, user: UserLike) -> None:
 def exit_impersonation(request: HTTPConnection) -> None:
     """Exit the impersonation session (restores to an original user)."""
     if 'session' in request.scope:
-        del request.scope['session'][IMPERSONATION_SESSION_KEY]
+        request.scope['session'].pop(IMPERSONATION_SESSION_KEY, None)
 
 
 def impersonation_is_active(request: HTTPConnection) -> bool:
