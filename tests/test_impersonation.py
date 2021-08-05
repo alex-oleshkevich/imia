@@ -28,7 +28,7 @@ async def app_view(request: Request):
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
-            'user_id': request.auth.identity,
+            'user_id': request.auth.user_id,
             'user_name': request.auth.display_name,
             'target_user': request.auth.impersonated_user_id,
         }
@@ -227,9 +227,9 @@ def test_helpers():
     def helpers_view(request: Request):
         return JSONResponse(
             {
-                'current_user': request.auth.identity,
+                'current_user': request.auth.user_id,
                 'active': impersonation_is_active(request),
-                'original_user': get_original_user(request).get_identifier(),
+                'original_user': get_original_user(request).get_id(),
             }
         )
 

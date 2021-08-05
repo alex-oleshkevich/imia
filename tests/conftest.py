@@ -16,7 +16,7 @@ class User:
     def get_display_name(self):
         return 'Root'
 
-    def get_identifier(self):
+    def get_id(self):
         return self.identifier
 
     def get_hashed_password(self):

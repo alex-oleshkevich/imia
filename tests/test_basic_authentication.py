@@ -13,7 +13,7 @@ async def app_view(request: Request):
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
-            'user_id': request.auth.identity,
+            'user_id': request.auth.user_id,
             'user_name': request.auth.display_name,
         }
     )

@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse, RedirectResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from imia import AuthenticationMiddleware, LoginManager, SESSION_HASH, SESSION_KEY, SessionAuthenticator
+from imia import SESSION_HASH, SESSION_KEY, AuthenticationMiddleware, LoginManager, SessionAuthenticator
 from tests.conftest import inmemory_user_provider, password_verifier
 
 
@@ -25,7 +25,7 @@ async def app_view(request: Request):
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
-            'user_id': request.auth.identity,
+            'user_id': request.auth.user_id,
             'user_name': request.auth.display_name,
         }
     )

@@ -64,7 +64,7 @@ class UserLike(t.Protocol):  # pragma: no cover_
     def get_display_name(self) -> str:
         ...
 
-    def get_identifier(self) -> t.Any:
+    def get_id(self) -> t.Any:
         ...
 
     def get_hashed_password(self) -> str:
@@ -101,7 +101,7 @@ class UserToken:
     @property
     def impersonated_user_id(self) -> t.Optional[t.Any]:
         """Get ID of user being impersonated."""
-        return self.original_user_token.user.get_identifier() if self.original_user_token else None
+        return self.original_user_token.user.get_id() if self.original_user_token else None
 
     @property
     def scopes(self) -> t.List[str]:
@@ -110,9 +110,9 @@ class UserToken:
         return self.user.get_scopes()
 
     @property
-    def identity(self) -> t.Any:
+    def user_id(self) -> t.Any:
         """Get ID of current user."""
-        return self.user.get_identifier()
+        return self.user.get_id()
 
     @property
     def user(self) -> UserLike:
@@ -148,7 +148,7 @@ class AnonymousUser:
     def get_display_name(self) -> str:
         return 'Anonymous'
 
-    def get_identifier(self) -> t.Any:
+    def get_id(self) -> t.Any:
         return None
 
     def get_hashed_password(self) -> str:
@@ -304,7 +304,7 @@ def impersonate(request: HTTPConnection, user: UserLike) -> None:
     """Activate impersonation."""
     request.scope['auth'] = UserToken(user, state=LoginState.IMPERSONATOR, original_user_token=request.scope['auth'])
     if 'session' in request.scope:
-        request.scope['session'][IMPERSONATION_SESSION_KEY] = user.get_identifier()
+        request.scope['session'][IMPERSONATION_SESSION_KEY] = user.get_id()
 
 
 def exit_impersonation(request: HTTPConnection) -> None:
@@ -516,7 +516,7 @@ def _check_for_other_user_session(connection: HTTPConnection, user: UserLike, us
     if SESSION_KEY in connection.session and any(
         [
             # if we have other user id in the session
-            connection.session[SESSION_KEY] != str(user.get_identifier()),
+            connection.session[SESSION_KEY] != str(user.get_id()),
             # and session has previously set hash, and hashes are not equal
             session_auth_hmac and not secrets.compare_digest(session_auth_hmac, user_password_hmac),
         ]
@@ -538,7 +538,7 @@ async def login_user(request: HTTPConnection, user: UserLike, secret_key: str) -
             await request.session.regenerate_id()  # type: ignore
 
     user_token = UserToken(user=user, state=LoginState.FRESH)
-    request.session[SESSION_KEY] = str(user.get_identifier())
+    request.session[SESSION_KEY] = str(user.get_id())
     request.session[SESSION_HASH] = user_password_hmac
     request.scope['auth'] = user_token
     return user_token
