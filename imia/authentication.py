@@ -52,7 +52,7 @@ class LoginState(enum.Enum):
     FRESH = "FRESH"
 
 
-class UserLike(t.Protocol):  # pragma: no cover
+class UserLike(t.Protocol):  # pragma: no cover_
     def get_display_name(self) -> str:
         ...
 
@@ -317,19 +317,24 @@ class AuthenticationMiddleware:
         authenticators: t.List[Authenticator],
         on_failure: str = "do_nothing",  # one of: raise, redirect, do_nothing
         redirect_to: str = "/",
-        exclude: t.List[t.Union[str, t.Pattern]] = None,
+        exclude_patterns: t.List[t.Union[str, t.Pattern]] = None,
+        include_patterns: t.List[t.Union[str, t.Pattern]] = None,
     ) -> None:
-        self._app = app
-        self._authenticators = authenticators
-        self._on_failure = on_failure
-        self._redirect_to = redirect_to
-        self._exclude = exclude or []
-
         if on_failure == 'redirect' and redirect_to is None:
             raise ValueError(
                 'redirect_to attribute of AuthenticationMiddleware cannot be None '
                 'if on_failure is set to "redirect".'
             )
+
+        if exclude_patterns is not None and include_patterns is not None:
+            raise ValueError('"exclude_patterns" and "include_patterns" are mutially exclusive.')
+
+        self._app = app
+        self._authenticators = authenticators
+        self._on_failure = on_failure
+        self._redirect_to = redirect_to
+        self._exclude_patterns = exclude_patterns or []
+        self._include_patterns = include_patterns
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] not in ["http", "websocket"]:  # pragma: no cover
@@ -340,9 +345,8 @@ class AuthenticationMiddleware:
         scope['auth'] = UserToken(AnonymousUser(), LoginState.ANONYMOUS)
 
         request = HTTPConnection(scope)
-        for pattern in self._exclude:
-            if re.search(pattern, str(request.url)):
-                return await self._app(scope, receive, send)
+        if self._should_interrupt(request):
+            return await self._app(scope, receive, send)
 
         user: t.Optional[UserLike] = None
         for authenticator in self._authenticators:
@@ -363,6 +367,16 @@ class AuthenticationMiddleware:
                 '%s.' % self._on_failure
             )
         await self._app(scope, receive, send)
+
+    def _should_interrupt(self, request: HTTPConnection) -> bool:
+        for pattern in self._exclude_patterns:
+            if re.search(pattern, str(request.url)):
+                return True
+
+        return bool(
+            self._include_patterns
+            and not any(re.search(pattern, str(request.url)) for pattern in self._include_patterns)
+        )
 
 
 def get_session_auth_id(connection: HTTPConnection) -> t.Optional[str]:

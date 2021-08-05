@@ -34,7 +34,7 @@ def test_middleware_ignores_url_patterns():
                     APIKeyAuthenticator(users=inmemory_user_provider),
                 ],
                 on_failure='raise',
-                exclude=[r'app2'],
+                exclude_patterns=[r'app2'],
             ),
         ],
     )
@@ -44,6 +44,40 @@ def test_middleware_ignores_url_patterns():
 
     # the middleware must bypass this request
     response = test_client.get('/app2')
+    assert response.json()['is_authenticated'] is False
+
+
+def test_middleware_protects_only_specific_url_patterns():
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route('/login', app_view, methods=['GET']),
+            Route('/app', app_view, methods=['GET']),
+            Route('/app2', app_view, methods=['GET']),
+        ],
+        middleware=[
+            Middleware(
+                AuthenticationMiddleware,
+                authenticators=[
+                    APIKeyAuthenticator(users=inmemory_user_provider),
+                ],
+                on_failure='raise',
+                include_patterns=['/app2'],
+            ),
+        ],
+    )
+    test_client = TestClient(app)
+
+    # the middleware must bypass this request
+    response = test_client.get('/app?apikey=root@localhost')
+    assert response.json()['is_authenticated'] is False
+
+    # the middleware must bypass this request
+    response = test_client.get('/app2?apikey=root@localhost')
+    assert response.json()['is_authenticated'] is True
+
+    # the middleware must bypass this request
+    response = test_client.get('/login')
     assert response.json()['is_authenticated'] is False
 
 
@@ -86,7 +120,7 @@ def test_middleware_redirect():
                 ],
                 on_failure='redirect',
                 redirect_to='/login',
-                exclude=['login'],
+                exclude_patterns=['login'],
             ),
         ],
     )
@@ -172,3 +206,25 @@ def test_middleware_unsupported_action():
         response = test_client.get('/app?apikey=invalid@localhost')
         assert response.json()['is_authenticated'] is False
     assert str(ex.value) == ('Unsupported action passed to AuthenticationMiddleware via on_failure argument: unknown.')
+
+
+def test_middleware_raises_if_both_include_and_exclude_patterns_passed():
+    with pytest.raises(ValueError) as ex:
+        Starlette(
+            debug=True,
+            routes=[
+                Route('/app', app_view, methods=['GET']),
+            ],
+            middleware=[
+                Middleware(
+                    AuthenticationMiddleware,
+                    authenticators=[
+                        APIKeyAuthenticator(users=inmemory_user_provider),
+                    ],
+                    on_failure='raise',
+                    include_patterns=[],
+                    exclude_patterns=[],
+                ),
+            ],
+        )
+    assert str(ex.value) == '"exclude_patterns" and "include_patterns" are mutially exclusive.'
