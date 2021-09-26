@@ -35,13 +35,13 @@ class SQLAlchemyCoreUserProvider(UserProvider):
         return await self._fetch_user_by_column(self._api_token_column, token)
 
     async def _fetch_user_by_column(self, column: str, value: t.Any) -> t.Optional[UserLike]:
-        column = self._identity_table.columns[column]
+        column = getattr(self._identity_table.c, column)
         stmt = select(self._identity_table).where(column == value)
         async with self._engine.begin() as connection:  # type: AsyncConnection
             result: Result = await connection.execute(stmt)
         row = result.one_or_none()
         if row:
-            return self._user_model(**row)
+            return self._user_model(**dict(row))
         return None
 
 
@@ -70,7 +70,7 @@ class SQLAlchemyORMUserProvider(UserProvider):
         return await self._fetch_user_by_column(self._api_token_column, token)
 
     async def _fetch_user_by_column(self, column: str, value: t.Any) -> t.Optional[UserLike]:
-        column = self._user_model.__table__.columns[column]
+        column = getattr(self._user_model, column)
         stmt = select(self._user_model).where(column == value)
         async with self._session_maker() as session:  # type: AsyncSession
             result: Result = await session.execute(stmt)
