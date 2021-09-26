@@ -2,7 +2,7 @@
 
 As this library does not depend on any specific implementation of user model, it cannot know the structure of the class
 that you are going to use as a user representation. To solve this problem we define
-a [protocol](https://www.python.org/dev/peps/pep-0544/) named `UserLike` that describes a shape of the user model. You,
+a [protocol](https://www.python.org/dev/peps/pep-0544/) named `UserLike` that describes an expected shape of the user model. You,
 as a library user have to define it before you can use this library.
 
 ## UserLike protocol

@@ -68,8 +68,8 @@ Here are all moving parts:
 When a HTTP request reaches your application, an `imia.AuthenticationMiddleware` will start handling it. The middleware
 iterates over configured authenticators and stops on the first one that returns non-None value. At this point the
 request is considered authenticated. If no authenticators return user model then the middleware will create  _anonymous
-user token_. You can get both tokens by reading `request.auth` property. Use `is_authenticated` token property to make
-sure that user is authenticated.
+user token_. The user token available in `request.auth` property. Use `user_token.is_authenticated` token property to
+make sure that user is authenticated.
 
 ## User authentication quick start
 
@@ -98,8 +98,8 @@ from imia import APIKeyAuthenticator, AuthenticationMiddleware, InMemoryProvider
 
 @dataclass
 class User:
-    """This is our user model. It may be ORM model or plain databases.
-    The library does not care, all it needs to know that this object has methods defined by the UserLike protocol."""
+    """This is our user model. It may be an ORM model, or any python class, the library does not care of it,
+    it only expects that the class has methods defined by the UserLike protocol."""
 
     id: str
     password: str = 'password'
