@@ -35,3 +35,7 @@ Leverage "in" operator to check if the user has a specific permission assigned:
 if 'auth:impersonate_others' in request.auth:
     print('user can activate impersonation')
 ```
+
+## Next topic
+
+[Password verification.](password_verification.md)
