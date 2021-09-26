@@ -79,26 +79,28 @@ user_provider = InMemoryProvider({
 
 > Requires sqlalchemy 1.4+ plus async driver (like asyncpg or aiosqlite).
 
-Since version 1.4 SQLAlchemy has native support of async/await syntax. This provider makes use of asynchronous
-capabilities of SQLAlchemy Core.
+Since version 1.4 SQLAlchemy has a native support of async/await syntax. This provider makes use of asynchronous
+capabilities of the SQLAlchemy Core.
 
 The provider must be configured first and here is the list of options:
 
 | Argument | Default | Type | Description | 
 |----------|------|---------|----| 
-| engine | required| [AsyncEngine](https://docs.sqlalchemy.org/en/14/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncEngine)| An engine (bind) to use for queries.| 
-| user_model | required| object | A UserLike class. The provider will instantiate it with keyword arguments from the query row. |
+| engine | required| [AsyncEngine](https://docs.sqlalchemy.org/en/14/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncEngine)| An engine (bind) to use for querying.| 
+| user_model | required| type | A UserLike class. The provider will instantiate it with keyword arguments from the query row. |
 | identity_table | required | sqlalchemy.Table| A SQLAlchemy table that stores user information.  |
-| identity_column |  'id' | str | A table column that contains user ID.|
-| username_column |  'email' | str | A table column that contains username or email.|
-| api_token_column |  'api_token' | str | A table column that contains API token (or API key).|
+| identity_column |  'id' | str | A table column with user ID.|
+| username_column |  'email' | str | A table column with username or email.|
+| api_token_column |  'api_token' | str | A table column with API token (or API key).|
 
 Example usage:
 
 ```python
-import sqlalchemy as sa
 from dataclasses import dataclass
+
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine
+
 from imia.ext.sqlalchemy import SQLAlchemyCoreUserProvider
 
 metadata = sa.MetaData()
