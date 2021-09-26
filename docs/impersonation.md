@@ -7,11 +7,13 @@ and see your application as they see it.
 
 Add `imia.ImpersonationMiddleware` to your middleware list. This middleware accepts these options:
 
-* `user_provider` a user provider
-* `guard_fn` (optional) a function to check if current user can switch users
-* `enter_query_param`  (optional, default "_impersonate") a request query param name that triggers impersonation
-* `exit_user_name`  (optional, default "___exit__") a magic value of "enter_query_param" to disable impersonation
-* `scope` (optional, default "auth:impersonate_others") a user's permission that allows switching users
+| Option | Default | Type | Description |
+|--------|---------|------|-------------|
+| user_provider | required | UserProvider | A user provider instance. | 
+| guard_fn | None | typing.Callable[[UserToken, HTTPConnection], bool] | A callable to check if the current user can switch users. | 
+| enter_query_param | '_impersonate' | str | A query param name that triggers impersonation. | 
+| exit_user_name | '__exit__' | str | A magic value of "enter_query_param" to disable impersonation. | 
+| scope | 'auth:impersonate_others' | str | A permission that allows switching users. | 
 
 ### Usage
 
@@ -33,7 +35,7 @@ As impersonation can expose a sensitive data to other users, there are two secur
 
 ### Using user scopes to restrict impersonation
 
-By default, a user has to have a permission named `auth:impersonate_others` in the scope. When user without that
+By default, a user has to have a permission named `auth:impersonate_others` in the scope. When a user without the
 permission will try to activate impersonation nothing will happen.
 
 ### Using guard function for fine-grained control
@@ -42,8 +44,6 @@ Alternatively, you can provide a callable via `guard_fn(user_token, request)` ar
 accepts two arguments: `imia.UserToken` and `starlette.requests.HTTPConnection` and must return a boolean value.
 
 > The guard function takes precedence over scope and always used when available.
-
-Example:
 
 ```python
 from imia import ImpersonationMiddleware
@@ -62,10 +62,10 @@ middleware = [
 ## Impersonation types
 
 An impersonation session may be stateless and stateful. With stateless kind you have to always pass `_impersonate` in
-your URL while stateful remembers settings in the session and is active until you deactivate it. The stateful depends on
-session.
+your URL while stateful remembers state in the session and will remain is active until you deactivate it, or till
+session expiration. The stateful depends on session.
 
-A stateful type will be used automatically if session middleware is added.
+> A stateful type will be used automatically if session middleware is added.
 
 ## Activate impersonation session
 

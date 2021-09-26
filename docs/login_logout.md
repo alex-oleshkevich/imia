@@ -33,8 +33,8 @@ if await login_manager.login():
 
 ## Logging in users
 
-Use `login(request, identity, credential)` method of `LoginManager` to log in users. A identity may be a username, or
-email, or other criteria. A credentials is a password, or one-time token, or another solution.
+Use `login(request, identity, credential)` method of `LoginManager` to log in users. An identity may be a username, or
+email, or other criteria. A credential can be a password, or a one-time token, or another solution.
 
 ```python
 from starlette.requests import Request
@@ -83,8 +83,8 @@ Note, the user session, and it's data will be destroyed.
 
 In some cases library regenerates session ID to improve security. If your session instance (the one obtained
 from `request.session`)
-implements `async def regenerate_id(self) -> Any` it will be called. It is strongly advised to have it. Or use this
-library [`starsessions.SessionMiddleware`](https://github.com/alex-oleshkevich/starsessions)
+implements `async def regenerate_id(self) -> typing.Any` it will be called. It is strongly advised to have it. Or use
+this library [`starsessions.SessionMiddleware`](https://github.com/alex-oleshkevich/starsessions)
 that natively integrates with Imia.
 
 ## Logging in users manually
@@ -104,6 +104,8 @@ async def custom_login_view(request):
     await login_user(request, user, secret_key)
     return RedirectResponse('/app')
 ```
+
+This function may be useful in unit tests to force login of a specific user.
 
 ## Next topic
 
