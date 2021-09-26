@@ -1,86 +1,124 @@
 # Request authentication
 
-When a request hits our application, we use request to identify the user. This process is called *request
-authentication*. Out of the box, we support several common strategies.
+When an HTTP request hits is a page protected by AuthenticationMiddleware, the middleware uses authenticators to load a
+user using the request data. This process is called _request authentication_. Once the authentication performed, the
+request is in distinct state: you can be fully sure whether the user is authenticated or is an anonymous one. This
+information stored in UserToken.
 
-The request authentication is backed by `imia.AuthenticationMiddleware`.
+## The idea
+
+The AuthenticationMiddleware receives one or many authenticators and iterates them on every request. The first
+authenticator that returns non-None value will stop the iteration. The returned value is an instance of a user model
+representing the current user. The authenticator can perform any action to get the user. It can read the database, call
+external API, or return a mock user.
 
 ## Configuration
 
-Here is an example setup:
+To enable authentication you need to add AuthenticationMiddleware to your application and configure the authenticator.
+This is a very basic example that uses session authenticator to load users.
+
+```python
+from starlette.applications import Starlette
+from starlette.middleware import Middleware
+
+from imia import AuthenticationMiddleware, SessionAuthenticator
+
+user_provider = ...
+
+authenticators = [
+    SessionAuthenticator(user_provider=user_provider),
+]
+
+app = Starlette(
+    middleware=[
+        Middleware(AuthenticationMiddleware, authenticators=authenticators),
+    ]
+)
+```
+
+## Multiple authenticators
+
+You are not limited to only one authenticator instance. Moreover, you can have as many as you want. For example, the
+request can be authenticated using session, API keys and Bearer tokens. To solve that challenge just setup three
+instances:
+
+```python
+from imia import APIKeyAuthenticator, BearerAuthenticator, SessionAuthenticator
+
+authenticators = [SessionAuthenticator(...), APIKeyAuthenticator(...), BearerAuthenticator(...)]
+```
+
+## Protecting only selected pages
+
+Many applications do not need to authenticate every request. For example, landing pages are open to public while admin
+area restricts access only to selected users. With Imia you can protect or exclude from protection a selected URLs using
+regex patterns.
 
 ```python
 from starlette.middleware import Middleware
-from starlette.applications import Starlette
+
 from imia import AuthenticationMiddleware
 
-app = Starlette(
-    middleware=[
-        Middleware(
-            AuthenticationMiddleware,
-            authenticators=[], on_failure="raise", redirect_to="/", 
-            exclude_patterns=[], include_patterns=[],
-        )
-    ]
-)
+middleware = [
+    Middleware(AuthenticationMiddleware, include_patterns=['/admin', '/app'], ...)
+]
 ```
 
-`AuthenticationMiddleware` accepts following arguments:
-
-* `authenticators` a list of authenticators. The middleware will call each to get a user instance from the request
-* `on_failure` a fallback action to execute when user cannot be loaded from the request. Possible choices are:
-    * "raise" will raise `imia.AuthenticationError` exception
-    * "redirect" will redirect user to a "redirect_to" URL (see below)
-    * "do_nothing" continue as anonymous user
-* `redirect_to` a URL to redirect user to when the middleware fails to load user instance. A regex is allowed as a
-  pattern. Note, that the full URL is checked: `https://example.com/app`, not just path `/app`.
-* `exclude_patterns` the middleware **WILL NOT** authenticate requests that match at least one pattern from the list
-* `include_patterns` **ONLY MATCHING** requests will be authenticated, others ignored
-
-## Authenticator usage
-
-The middleware accepts one or many authenticator instances. It will iterate over all authenticator asking them to find a
-user instance. If no authenticators can provide a user, the middleware will execute a fallback strategy. Or, will break on
-the first authenticator that returns a user instance.
+Similarly to `include_patterns` there is `exclude_pattens` option that disables middleware for selected URLs.
 
 ```python
 from starlette.middleware import Middleware
-from starlette.applications import Starlette
-from imia import AuthenticationMiddleware, APIKeyAuthenticator, TokenAuthenticator, HTTPBasicAuthenticator
 
-user_provider = MyUserProvider()
-password_verifier = MyPasswordVerifier()
+from imia import AuthenticationMiddleware
 
-app = Starlette(
-    middleware=[
-        Middleware(
-            AuthenticationMiddleware,
-            authenticators=[
-                HTTPBasicAuthenticator(user_provider, password_verifier)
-                APIKeyAuthenticator(user_provider),
-                TokenAuthenticator(user_provider, 'Bearer'),
-            ]
-        )
-    ]
-)
+middleware = [
+    Middleware(AuthenticationMiddleware, exclude_patterns=['/public', '/static'], ...)
+]
 ```
 
-## Use cases
+> If both `include_patterns` and `exclude_patterns` used then the middleware will check `exclude_patterns` first.
 
-### Protecting specific parts of the application
+## Failure strategies
 
-Very often, you want to require authentication for specific areas only, like `/app` or `/admin`. You can achieve it with
-this configuration:
+Before we talked about cases when the request was successfully authenticated. Now it is time to see what we can do if no
+authenticator can load the user.
+
+Out of the box Imia provides three actions: raise `AuthenticationError`, redirect to another URL and ignore.
+
+### Raising AuthenticationError
+
+This strategy will raise `imia.AuthenticationError` if all authenticators fail. Use a global error handler to catch the
+exception and properly handle it.
 
 ```python
-Middleware(
-    AuthenticationMiddleware,
-    authenticators=[], on_failure="redirect", redirect_to="/login", include_patterns=['/app', '/admin'],
-)
+from starlette.middleware import Middleware
+
+from imia import AuthenticationMiddleware
+
+middleware = [
+    Middleware(AuthenticationMiddleware, on_failure='raise', ...)
+]
 ```
 
-With this setup, all requests to `/app` or `/admin` will be authenticated while all other will not. If unauthenticated
-user will try to access `/app` it will be redirected to `/login` path.
+### Redirecting to a login page
+
+Some application may need to redirect users to another URL, usually a login page. To enable redirection set `on_failure`
+to `redirect` and add extra `redirect_to` argument. The `redirect_to` arguments is a destination URL.
+
+```python
+from starlette.middleware import Middleware
+
+from imia import AuthenticationMiddleware
+
+middleware = [
+    Middleware(AuthenticationMiddleware, on_failure='redirect', redirect_to='/login', ...)
+]
+```
+
+### Ignore authentication errors
+
+When you go this scenario no action will be performed and your controller/view will receive an unauthenticated request.
+Do not forget to check `request.auth.is_authenticated` to make sure you are still protecting sensitive data.
 
 ## Retrieving the authenticated user
 
@@ -94,6 +132,8 @@ def app_view(request):
     user = request.auth.user
     return PlainTextResponse(f'hello {user}!')
 ```
+
+> If the request is unauthenticated the user will be an instance of `AnonymousUser` class.
 
 ## Checking if user is authenticated
 
@@ -110,3 +150,7 @@ def app_view(request):
 ```
 
 If you want more details about authentication state, inpect the [user token](user_token.md).
+
+## Next topic
+
+The next topic of this guide will describe [built-in authenticators](authenticators.md).

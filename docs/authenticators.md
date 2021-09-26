@@ -1,47 +1,52 @@
 # Authenticators
 
-An authenticator is a plugin for `imia.AuthenticationMiddleware`. It's purpose is to load user instance from the
-request.
+Authenticators are plugins for `imia.AuthenticationMiddleware`. Their purpose is to load user instance from the request.
 
 ## Session authenticator
+
+Class: `imia.SessionAuthenticator`
 
 Session authenticator uses session to read authenticated user information. Usually, you need it when you use stateful
 login/logout flow.
 
-**Note**, the authenticator requires session to be available.
+> **Note**, the authenticator requires session middleware to be activated.
 
-### Settings
-
-* `user_provider` a user provider to load user instance
+| Option | Type | Description |
+|---------|-----|-------------|
+|user_provider | UserProvider | A user provider to use.|
 
 ## HTTP-Basic authenticator
 
+Class: `imia.HTTPBasicAuthenticator`
+
 Use this class to authenticate users using HTTP-Basic auth.
 
-### Settings
+| Option | Type | Description |
+|---------|-----|-------------|
+|user_provider | UserProvider | A user provider to use.|
+|password_verifier | PasswordVerifier | An instance of [password verifier](./password_verification.md).|
 
-* `user_provider` a user provider to load user instance
-* `password_verifier` to check user password
-
-Now you can access protected area by specifying credentials in the request URL:
+When you add this authenticator you can access protected area by specifying credentials in the request URL:
 
 ```shell
 curl https://user:password@example.com/app
 ```
 
-## Token (and Bearer token) authenticators
+## Token authenticators
 
-Token, and it's specific case, Bearer token, is a popular approach to authenticate API requests.
+Classes: `imia.TokenAuthenticator`
 
-### Settings
+Tokens are a popular way to authenticate API requests. The token value is read from the `Authorization` header and then
+the user provider will search a user for the given token.
 
-* `user_provider` a user provider to load user instance
-* `token` a token name (a string that goes before the actual value in the Authorization header)
+| Option | Type | Description |
+|---------|-----|-------------|
+|user_provider | UserProvider | A user provider to use.|
+|token | str | A token type.|
 
-For example in header string `Authorization: Bearer XXXXXX` a token name is "Bearer".
-
-For bearer tokens there is a convenience authenticator `imia.BearerAuthenticator`
-that sets up the header name for you.
+The token type is a part of the header that goes right before the token value. For example, in the header "
+Authorization:
+Bearer TOKENVALUE" the token type is "bearer".
 
 ### Usage
 
@@ -49,15 +54,29 @@ that sets up the header name for you.
 curl -H 'Authorization: Bearer XXXX' https://example.com/app
 ```
 
+## Bearer token authenticators
+
+Classes: `imia.BearerAuthenticator`
+
+The bearer token is a private case of the token authenticators. The difference between them is
+that `BearerAuthenticator`
+hardcodes token type to "Bearer"/
+
+| Option | Type | Description |
+|---------|-----|-------------|
+|user_provider | UserProvider | A user provider to use.|
+
 ## API key authenticator
 
-This one is similar to the token authenticator but reads API key from query params or headers.
+Classes: `imia.APIKeyAuthenticator`
 
-### Settings
+The API key authenticator is similar to token authenticator but obtains API keys from query params or headers.
 
-* `user_provider` a user provider to load user instance
-* `query_param` (default = "apikey") a query param name that carries key
-* `header_name` (default = "X-Api-Key") a header name with a key
+| Option | Default | Type | Description |
+|---------|--------|------|-------------|
+|user_provider | required | UserProvider | A user provider to use.|
+|query_param | 'apikey' | str | A name of a query param.|
+|header_name | 'X-Api-Key' |  str | A name of a header.|
 
 ### Usage
 
@@ -67,10 +86,10 @@ curl https://example.com/app?apikey=XXXX
 curl -H 'X-Api-Key: XXXX' https://example.com/app
 ```
 
-## Custom authenticator
+## Building custom authenticators
 
 Creating own authenticator is pretty simple. Your class has to implement `imia.Authenticator` protocol. For convenience,
-you can extend `imia.BaseAuthenticator` abstract class.
+you can extend `imia.BaseAuthenticator` abstract class and implement `authenticate(connection)` method.
 
 ```python
 import typing as t
@@ -83,3 +102,7 @@ class MyAuthenticator:
     async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
         return load_user_from_request(connection)
 ```
+
+## Next topic
+
+Continue to [user tokens](user_token.md).
