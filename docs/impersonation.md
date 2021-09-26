@@ -94,5 +94,5 @@ You will get back to your original user.
 
 ## When to use?
 
-For example, site admin may need to log in as customers to see what they see to assist them. Instead of asking them for
-credentials, admins can temporary become them. This is like "su" command in Unix systems.
+For example, a site admin may need to log in as a customer to assist it. Instead of asking it for
+login credentials, the admin can temporarily become a customer. This is like "su" command in Unix systems.
