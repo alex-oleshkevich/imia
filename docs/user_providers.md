@@ -136,17 +136,17 @@ The provider must be configured first and here is the list of options:
 |----------|------|---------|----| 
 | session_maker | required| [sessionmaker](https://docs.sqlalchemy.org/en/14/orm/session_api.html#sqlalchemy.orm.sessionmaker)| An session maker instance.| 
 | user_model | required| object | A UserLike class. |
-| identity_column |  'id' | str | A table column that contains user ID.|
-| username_column |  'email' | str | A table column that contains username or email.|
-| api_token_column |  'api_token' | str | A table column that contains API token (or API key).|
+| identity_column |  'id' | str | A table column with user ID.|
+| username_column |  'email' | str | A table column with username or email.|
+| api_token_column |  'api_token' | str | A table column with API token (or API key).|
 
 Example usage:
 
 ```python
 import sqlalchemy as sa
-from dataclasses import dataclass
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+
 from imia.ext.sqlalchemy import SQLAlchemyORMUserProvider
 
 metadata = sa.MetaData()
