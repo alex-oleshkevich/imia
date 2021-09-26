@@ -36,15 +36,16 @@ curl https://user:password@example.com/app
 
 Classes: `imia.TokenAuthenticator`
 
-Tokens are a popular way to authenticate API requests. The token is read from the request headers and then challenges
-agains the user provider.
+Tokens are a popular way to authenticate API requests. The token value is read from the `Authorization` header and then
+the user provider will search a user for the given token.
 
 | Option | Type | Description |
 |---------|-----|-------------|
 |user_provider | UserProvider | A user provider to use.|
 |token | str | A token type.|
 
-The token type is a part of the headers that goes right before the token value. For example, in header "Authorization:
+The token type is a part of the header that goes right before the token value. For example, in the header "
+Authorization:
 Bearer TOKENVALUE" the token type is "bearer".
 
 ### Usage
@@ -70,12 +71,6 @@ hardcodes token type to "Bearer"/
 Classes: `imia.APIKeyAuthenticator`
 
 The API key authenticator is similar to token authenticator but obtains API keys from query params or headers.
-
-### Settings
-
-* `user_provider` a user provider to load user instance
-* `query_param` (default = "apikey") a query param name that carries key
-* `header_name` (default = "X-Api-Key") a header name with a key
 
 | Option | Default | Type | Description |
 |---------|--------|------|-------------|

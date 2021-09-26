@@ -104,7 +104,7 @@ class TokenAuthenticator(BaseAuthenticator):
         except ValueError:
             return None
         else:
-            if token_name != self.token_name:
+            if token_name.lower() != self.token_name.lower():
                 return None
             return await self.user_provider.find_by_token(token_value)
 
