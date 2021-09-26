@@ -37,11 +37,11 @@ jobs:
 
             - name: Lint with mypy
               run: |
-                  mypy imia/
+                  mypy --config-file=pyproject.toml imia/
 
             - name: Lint with black
               run: |
-                  black --check imia tests
+                  black --config=pyproject.toml
 
             - name: Test with pytest
               run: |
