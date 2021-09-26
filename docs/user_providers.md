@@ -175,4 +175,6 @@ user_provider = SQLAlchemyORMUserProvider(async_session, User)
 
 See full example in [examples/sqlalchemy_orm.py](../examples/sqlalchemy_orm.py)
 
+## Next topic
+
 Next topic is [request authentication](authentication.md).

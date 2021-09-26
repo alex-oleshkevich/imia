@@ -8,13 +8,14 @@ information stored in UserToken.
 ## The idea
 
 The AuthenticationMiddleware receives one or many authenticators and iterates them on every request. The first
-authenticator that returns non-None value will stop the iteration. The returned value is current user. The authenticator
-can perform any action to fetch the user. It can read the database, call external API, or return a mock user.
+authenticator that returns non-None value will stop the iteration. The returned value is an instance of a user model
+representing the current user. The authenticator can perform any action to get the user. It can read the database, call
+external API, or return a mock user.
 
 ## Configuration
 
-To enable authentication you need to add AuthenticationMiddleware to your application and configure authenticator. This
-is a very basic example that uses session authenticator to load users.
+To enable authentication you need to add AuthenticationMiddleware to your application and configure the authenticator.
+This is a very basic example that uses session authenticator to load users.
 
 ```python
 from starlette.applications import Starlette
@@ -37,8 +38,8 @@ app = Starlette(
 
 ## Multiple authenticators
 
-You are not limited to only one authenticator instance. Moreover, you can have as many as you want. For example, you
-application can authenticate uses using session, API keys and Bearer tokens. To solve that challenge just setup three
+You are not limited to only one authenticator instance. Moreover, you can have as many as you want. For example, the
+request can be authenticated using session, API keys and Bearer tokens. To solve that challenge just setup three
 instances:
 
 ```python
@@ -50,7 +51,8 @@ authenticators = [SessionAuthenticator(...), APIKeyAuthenticator(...), BearerAut
 ## Protecting only selected pages
 
 Many applications do not need to authenticate every request. For example, landing pages are open to public while admin
-areas needs protection. With Imia you can protect or exclude from protection a selected URLs using regex patterns.
+area restricts access only to selected users. With Imia you can protect or exclude from protection a selected URLs using
+regex patterns.
 
 ```python
 from starlette.middleware import Middleware
@@ -62,7 +64,7 @@ middleware = [
 ]
 ```
 
-Similarly to `include_patterns` there is `exclude_pattens` option that disables middleware on a selected URLs.
+Similarly to `include_patterns` there is `exclude_pattens` option that disables middleware for selected URLs.
 
 ```python
 from starlette.middleware import Middleware
@@ -78,7 +80,7 @@ middleware = [
 
 ## Failure strategies
 
-Before you talked about cases when the request was successfully authenticated. Now time to see what we can do if no
+Before we talked about cases when the request was successfully authenticated. Now it is time to see what we can do if no
 authenticator can load the user.
 
 Out of the box Imia provides three actions: raise `AuthenticationError`, redirect to another URL and ignore.
@@ -101,7 +103,7 @@ middleware = [
 ### Redirecting to a login page
 
 Some application may need to redirect users to another URL, usually a login page. To enable redirection set `on_failure`
-to `redirect` and additional `redirect_to` argument. `redirect_to` is a target URL.
+to `redirect` and add extra `redirect_to` argument. The `redirect_to` arguments is a destination URL.
 
 ```python
 from starlette.middleware import Middleware
@@ -116,9 +118,9 @@ middleware = [
 ### Ignore authentication errors
 
 When you go this scenario no action will be performed and your controller/view will receive an unauthenticated request.
-Do not forget to check `request.auth.is_authenticated` to make sure you are still protecting private data.
+Do not forget to check `request.auth.is_authenticated` to make sure you are still protecting sensitive data.
 
-### Retrieving the authenticated user
+## Retrieving the authenticated user
 
 You can get currently authenticated user from [user token](user_token.md):
 
@@ -133,7 +135,7 @@ def app_view(request):
 
 > If the request is unauthenticated the user will be an instance of `AnonymousUser` class.
 
-### Checking if user is authenticated
+## Checking if user is authenticated
 
 To quickly check if current user is not anonymous, use `request.auth` in `if` statement.
 
