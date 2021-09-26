@@ -60,9 +60,9 @@ Here are all moving parts:
 
 1. **UserLike** object, aka "user model" - is an arbitrary class that implements `imia.UserLike` protocol.
 2. **a user provider** - an adapter that loads user model (UserLike object) from the storage (a database).
-3. **an authenticator** - a class that loads user using user providers from the request (eg. session)
-4. **a authentication middleware** that accepts a HTTP request and calls authenticators for a user model.
-5. the middleware will populate `request.auth` with
+3. **an authenticator** - a class that loads user using the user provider from the request (eg. session)
+4. **an authentication middleware** that accepts an HTTP request and calls authenticators for a user model. The
+   middleware always populates `request.auth` with `UserToken`.
 6. **user token** is a class that holds authentication state
 
 When a HTTP request reaches your application, an `imia.AuthenticationMiddleware` will start handling it. The middleware
