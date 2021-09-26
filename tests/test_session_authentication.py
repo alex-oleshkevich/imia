@@ -10,7 +10,7 @@ from imia import SESSION_HASH, SESSION_KEY, AuthenticationMiddleware, LoginManag
 from tests.conftest import inmemory_user_provider, password_verifier
 
 
-async def login_view(request: Request):
+async def login_view(request: Request) -> RedirectResponse:
     form_data = await request.form()
     email = form_data.get('email')
     password = form_data.get('password')
@@ -21,7 +21,7 @@ async def login_view(request: Request):
     return RedirectResponse('/login?error=1')
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -31,7 +31,7 @@ async def app_view(request: Request):
     )
 
 
-def test_session_authentication():
+def test_session_authentication() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -56,8 +56,8 @@ def test_session_authentication():
     assert response.json()['user_name'] == 'Root'
 
 
-def test_session_authentication_with_missing_user():
-    def change_user_view(request: Request):
+def test_session_authentication_with_missing_user() -> None:
+    def change_user_view(request: Request) -> JSONResponse:
         request.session[SESSION_KEY] = 'otheruser@localhost'
         request.session[SESSION_HASH] = 'otheruser@localhost-hash'
         return JSONResponse({})

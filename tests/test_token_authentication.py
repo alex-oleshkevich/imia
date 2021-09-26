@@ -9,7 +9,7 @@ from imia import AuthenticationMiddleware, BearerAuthenticator, TokenAuthenticat
 from tests.conftest import inmemory_user_provider
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -19,7 +19,7 @@ async def app_view(request: Request):
     )
 
 
-def test_token_authentication():
+def test_token_authentication() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -41,7 +41,7 @@ def test_token_authentication():
     assert response.json()['user_name'] == 'Root'
 
 
-def test_token_authentication_with_invalid_token():
+def test_token_authentication_with_invalid_token() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -61,7 +61,7 @@ def test_token_authentication_with_invalid_token():
     assert response.json()['is_authenticated'] is False
 
 
-def test_token_authentication_with_invalid_token_string():
+def test_token_authentication_with_invalid_token_string() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -90,7 +90,7 @@ def test_token_authentication_with_invalid_token_string():
     assert response.json()['is_authenticated'] is False
 
 
-def test_bearer_authentication():
+def test_bearer_authentication() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -112,7 +112,7 @@ def test_bearer_authentication():
     assert response.json()['user_name'] == 'Root'
 
 
-def test_bearer_authentication_with_invalid_token():
+def test_bearer_authentication_with_invalid_token() -> None:
     app = Starlette(
         debug=True,
         routes=[

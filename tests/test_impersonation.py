@@ -1,4 +1,5 @@
 import pytest
+import typing as t
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -11,6 +12,7 @@ from imia import (
     APIKeyAuthenticator,
     AuthenticationMiddleware,
     ImpersonationMiddleware,
+    InMemoryProvider,
     SessionAuthenticator,
     get_original_user,
     impersonation_is_active,
@@ -19,12 +21,12 @@ from imia import (
 from tests.conftest import User, inmemory_user_provider, user
 
 
-async def login_view(request: Request):
+async def login_view(request: Request) -> JSONResponse:
     await login_user(request, user, '')
     return JSONResponse({})
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -35,7 +37,7 @@ async def app_view(request: Request):
     )
 
 
-def test_stateless_impersonation():
+def test_stateless_impersonation() -> None:
     """Without session the _impersonate key must be always passed."""
     app = Starlette(
         debug=True,
@@ -60,7 +62,7 @@ def test_stateless_impersonation():
     assert response.json()['target_user'] is None
 
 
-def test_stateful_impersonation():
+def test_stateful_impersonation() -> None:
     """With session the impersonation status must be kept between requests until deactivated."""
     app = Starlette(
         debug=True,
@@ -109,7 +111,7 @@ def test_stateful_impersonation():
     assert response.json()['target_user'] is None
 
 
-def test_middleware_requires_auth_middleware():
+def test_middleware_requires_auth_middleware() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -125,7 +127,7 @@ def test_middleware_requires_auth_middleware():
     assert str(ex.value) == 'ImpersonationMiddleware needs AuthenticationMiddleware to be installed.'
 
 
-def test_guard_function_allows():
+def test_guard_function_allows() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -141,7 +143,7 @@ def test_guard_function_allows():
     assert response.json()['user_id'] == 'customer@localhost'
 
 
-def test_guard_function_denies():
+def test_guard_function_denies() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -157,12 +159,17 @@ def test_guard_function_denies():
     assert response.json()['user_id'] == 'root@localhost'
 
 
-def test_user_has_required_scope():
+def test_user_has_required_scope() -> None:
     class _User(User):
-        def get_scopes(self):
+        def get_scopes(self) -> list:
             return ['auth:impersonate_others']
 
-    inmemory_user_provider.user_map['impersonator@localhost'] = _User()
+    user_provider = InMemoryProvider(
+        {
+            'impersonator@localhost': _User(),
+            **inmemory_user_provider.user_map,
+        }
+    )
 
     app = Starlette(
         debug=True,
@@ -170,8 +177,8 @@ def test_user_has_required_scope():
             Route('/app', app_view),
         ],
         middleware=[
-            Middleware(AuthenticationMiddleware, authenticators=[APIKeyAuthenticator(inmemory_user_provider)]),
-            Middleware(ImpersonationMiddleware, user_provider=inmemory_user_provider),
+            Middleware(AuthenticationMiddleware, authenticators=[APIKeyAuthenticator(user_provider)]),
+            Middleware(ImpersonationMiddleware, user_provider=user_provider),
         ],
     )
     test_client = TestClient(app)
@@ -179,12 +186,17 @@ def test_user_has_required_scope():
     assert response.json()['user_id'] == 'customer@localhost'
 
 
-def test_user_has_not_required_scope():
+def test_user_has_not_required_scope() -> None:
     class _User(User):
-        def get_scopes(self):
+        def get_scopes(self) -> list:
             return []
 
-    inmemory_user_provider.user_map['impersonator@localhost'] = _User()
+    user_provider = InMemoryProvider(
+        {
+            'impersonator@localhost': _User(),
+            **inmemory_user_provider.user_map,
+        }
+    )
 
     app = Starlette(
         debug=True,
@@ -192,8 +204,8 @@ def test_user_has_not_required_scope():
             Route('/app', app_view),
         ],
         middleware=[
-            Middleware(AuthenticationMiddleware, authenticators=[APIKeyAuthenticator(inmemory_user_provider)]),
-            Middleware(ImpersonationMiddleware, user_provider=inmemory_user_provider),
+            Middleware(AuthenticationMiddleware, authenticators=[APIKeyAuthenticator(user_provider)]),
+            Middleware(ImpersonationMiddleware, user_provider=user_provider),
         ],
     )
     test_client = TestClient(app)
@@ -201,12 +213,12 @@ def test_user_has_not_required_scope():
     assert response.json()['user_id'] == 'root@localhost'
 
 
-def test_guard_fn_has_higher_precedence():
+def test_guard_fn_has_higher_precedence() -> None:
     class _User(User):
-        def get_scopes(self):
+        def get_scopes(self) -> t.List[str]:
             return ['auth:impersonate_others']
 
-    inmemory_user_provider.user_map['impersonator@localhost'] = _User()
+    user_provider = InMemoryProvider({'impersonator@localhost': _User()})
 
     app = Starlette(
         debug=True,
@@ -214,8 +226,8 @@ def test_guard_fn_has_higher_precedence():
             Route('/app', app_view),
         ],
         middleware=[
-            Middleware(AuthenticationMiddleware, authenticators=[APIKeyAuthenticator(inmemory_user_provider)]),
-            Middleware(ImpersonationMiddleware, user_provider=inmemory_user_provider, guard_fn=lambda c, u: False),
+            Middleware(AuthenticationMiddleware, authenticators=[APIKeyAuthenticator(user_provider)]),
+            Middleware(ImpersonationMiddleware, user_provider=user_provider, guard_fn=lambda c, u: False),
         ],
     )
     test_client = TestClient(app)
@@ -223,8 +235,8 @@ def test_guard_fn_has_higher_precedence():
     assert response.json()['user_id'] == 'root@localhost'
 
 
-def test_helpers():
-    def helpers_view(request: Request):
+def test_helpers() -> None:
+    def helpers_view(request: Request) -> JSONResponse:
         return JSONResponse(
             {
                 'current_user': request.auth.user_id,

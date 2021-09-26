@@ -9,7 +9,7 @@ from imia import APIKeyAuthenticator, AuthenticationMiddleware
 from tests.conftest import inmemory_user_provider
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -19,7 +19,7 @@ async def app_view(request: Request):
     )
 
 
-def test_apikey_authentication():
+def test_apikey_authentication() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -41,7 +41,7 @@ def test_apikey_authentication():
     assert response.json()['user_name'] == 'Root'
 
 
-def test_apikey_authentication_with_invalid_user():
+def test_apikey_authentication_with_invalid_user() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -64,7 +64,7 @@ def test_apikey_authentication_with_invalid_user():
     assert response.json()['is_authenticated'] is False
 
 
-def test_apikey_authentication_using_header():
+def test_apikey_authentication_using_header() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -86,7 +86,7 @@ def test_apikey_authentication_using_header():
     assert response.json()['user_name'] == 'Root'
 
 
-def test_apikey_query_params_have_higher_precedense():
+def test_apikey_query_params_have_higher_precedense() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -106,7 +106,7 @@ def test_apikey_query_params_have_higher_precedense():
     assert response.json()['is_authenticated'] is True
 
 
-def test_apikey_with_missing_token():
+def test_apikey_with_missing_token() -> None:
     app = Starlette(
         debug=True,
         routes=[

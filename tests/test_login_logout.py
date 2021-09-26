@@ -5,7 +5,7 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import JSONResponse, RedirectResponse, Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 from starsessions import InMemoryBackend, SessionMiddleware as StarSessionMiddleware
@@ -19,13 +19,13 @@ class Attacker(User):
     password = 'hackit'
 
 
-def index_view(request: Request):
+def index_view(request: Request) -> Response:
     # empty sessions are deleted
     request.session['example'] = 'value'
     return JSONResponse({})
 
 
-async def login_view(request: Request):
+async def login_view(request: Request) -> Response:
     form_data = await request.form()
     email = form_data.get('email')
     password = form_data.get('password')
@@ -36,29 +36,29 @@ async def login_view(request: Request):
     return RedirectResponse('/login?error=1')
 
 
-async def logout_view(request: Request):
+async def logout_view(request: Request) -> Response:
     login_manager = LoginManager(inmemory_user_provider, password_verifier)
     await login_manager.logout(request)
     return RedirectResponse('/login')
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> Response:
     return JSONResponse({'session_auth_id': get_session_auth_id(request)})
 
 
-async def set_user_view(request: Request):
+async def set_user_view(request: Request) -> Response:
     """This view forcibly sets user.."""
     await login_user(request, User(), '')
     return JSONResponse({})
 
 
-async def set_attacker_view(request: Request):
+async def set_attacker_view(request: Request) -> Response:
     """This view forcibly sets Attacker user that has same ID but different password."""
     await login_user(request, Attacker(), '')
     return JSONResponse({})
 
 
-async def session_view(request: Request):
+async def session_view(request: Request) -> Response:
     return JSONResponse(dict(request.session))
 
 
@@ -96,7 +96,7 @@ app2 = Starlette(
 
 
 @pytest.mark.parametrize('app', [app, app2])
-def test_login(app):
+def test_login(app: Starlette) -> None:
     test_client = TestClient(app)
     response = test_client.post('/login', data={'email': 'root@localhost', 'password': 'pa$$word'})
     assert response.status_code == 307
@@ -106,7 +106,7 @@ def test_login(app):
 
 
 @pytest.mark.parametrize('app', [app, app2])
-def test_login_with_invalid_credentials(app):
+def test_login_with_invalid_credentials(app: Starlette) -> None:
     test_client = TestClient(app)
     response = test_client.post('/login', data={'email': 'root@localhost', 'password': 'invalid'})
     assert response.status_code == 307
@@ -116,7 +116,7 @@ def test_login_with_invalid_credentials(app):
 
 
 @pytest.mark.parametrize('app', [app, app2])
-def test_logout(app):
+def test_logout(app: Starlette) -> None:
     test_client = TestClient(app)
     test_client.post('/login', data={'email': 'root@localhost', 'password': 'invalid'})
     response = test_client.post('/logout')
@@ -128,7 +128,7 @@ def test_logout(app):
 
 
 @pytest.mark.parametrize('app', [app, app2])
-def test_regenerates_session_id(app):
+def test_regenerates_session_id(app: Starlette) -> None:
     test_client = TestClient(app)
     response = test_client.get('/')
     session_id = response.cookies['session']
@@ -141,7 +141,7 @@ def test_regenerates_session_id(app):
 
 
 @pytest.mark.parametrize('app', [app, app2])
-def test_keep_session_data_for_user(app):
+def test_keep_session_data_for_user(app: Starlette) -> None:
     test_client = TestClient(app)
     test_client.get('/')  # write some data to session
     test_client.get('/user')  # set user
@@ -156,7 +156,7 @@ def test_keep_session_data_for_user(app):
 
 
 @pytest.mark.parametrize('app', [app, app2])
-def test_clears_session_if_reused_from_another_user(app):
+def test_clears_session_if_reused_from_another_user(app: Starlette) -> None:
     test_client = TestClient(app)
     test_client.get('/')  # write some data to session
     test_client.get('/attack')  # set attacker user

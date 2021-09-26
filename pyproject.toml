@@ -56,7 +56,6 @@ known_third_party = ["pkg_resources", "toml"]
 known_future_library = "__future__"
 line_length = 120
 multi_line_output = 3
-not_skip = "__init__.py"
 profile = "black"
 use_parentheses = true
 
@@ -74,4 +73,12 @@ exclude_lines = [
 [tool.mypy]
 disallow_untyped_defs = true
 ignore_missing_imports = true
-exclude = "^tests/"
+
+[tool.pytest.ini_options]
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+norecursedirs = [
+    "node_modules", "frontend", "storage", "dist", ".git",
+    "*/migrations/*", "*/static/*", "docs", ".venv"
+]
+addopts = "--tb=short -s --no-cov-on-fail"
+testpaths = ["tests"]

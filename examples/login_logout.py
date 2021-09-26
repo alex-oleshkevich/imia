@@ -6,7 +6,7 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, RedirectResponse
+from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.routing import Route
 
 from imia import AuthenticationMiddleware, InMemoryProvider, LoginManager, SessionAuthenticator
@@ -20,16 +20,16 @@ class User:
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
     scopes: list[str] = dataclasses.field(default_factory=list)
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return 'User'
 
-    def get_id(self):
+    def get_id(self) -> str:
         return self.identifier
 
-    def get_hashed_password(self):
+    def get_hashed_password(self) -> str:
         return self.password
 
-    def get_scopes(self):
+    def get_scopes(self) -> list:
         return self.scopes
 
 
@@ -51,7 +51,7 @@ def index_view(request: Request) -> HTMLResponse:
     return HTMLResponse("""<a href="/login">Login</a> | <a href="/app">App</a>""")
 
 
-async def login_view(request: Request):
+async def login_view(request: Request) -> Response:
     """Display login page  and handle login POST request."""
     error = ''
     if 'error' in request.query_params:

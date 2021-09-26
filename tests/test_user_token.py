@@ -12,20 +12,20 @@ class User:
     scopes: t.List[str] = dataclasses.field(default_factory=list)
     name: str = 'Root'
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return 'Root'
 
-    def get_id(self):
+    def get_id(self) -> str:
         return self.identifier
 
-    def get_hashed_password(self):
+    def get_hashed_password(self) -> str:
         return self.password
 
-    def get_scopes(self):
+    def get_scopes(self) -> list:
         return self.scopes
 
 
-def test_user_token():
+def test_user_token() -> None:
     user = User(scopes=['a'])
     token = UserToken(user, state=LoginState.FRESH)
     assert token.is_authenticated
@@ -42,7 +42,7 @@ def test_user_token():
     assert 'a' in token
 
 
-def test_anon_user_token():
+def test_anon_user_token() -> None:
     user = AnonymousUser()
     token = UserToken(user, state=LoginState.ANONYMOUS)
     assert not token.is_authenticated
@@ -58,7 +58,7 @@ def test_anon_user_token():
     assert str(token) == 'Anonymous'
 
 
-def test_impersonated_user_token():
+def test_impersonated_user_token() -> None:
     user = User()
     root_token = UserToken(user, state=LoginState.FRESH)
 

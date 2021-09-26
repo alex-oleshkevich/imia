@@ -19,16 +19,16 @@ class User:
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
     scopes: list[str] = dataclasses.field(default_factory=list)
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return 'User'
 
-    def get_id(self):
+    def get_id(self) -> str:
         return self.identifier
 
-    def get_hashed_password(self):
+    def get_hashed_password(self) -> str:
         return self.password
 
-    def get_scopes(self):
+    def get_scopes(self) -> list:
         return self.scopes
 
 

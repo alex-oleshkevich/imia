@@ -13,16 +13,16 @@ class User:
     scopes: t.List[str] = dataclasses.field(default_factory=list)
     name = 'Root'
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return 'Root'
 
-    def get_id(self):
+    def get_id(self) -> t.Any:
         return self.identifier
 
-    def get_hashed_password(self):
+    def get_hashed_password(self) -> str:
         return self.password
 
-    def get_scopes(self):
+    def get_scopes(self) -> t.List[str]:
         return self.scopes
 
 

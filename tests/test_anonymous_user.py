@@ -1,7 +1,7 @@
 from imia import AnonymousUser
 
 
-def test_anon_user():
+def test_anon_user() -> None:
     user = AnonymousUser()
     assert user.get_id() is None
     assert user.get_scopes() == []

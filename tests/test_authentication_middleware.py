@@ -10,7 +10,7 @@ from imia import APIKeyAuthenticator, AuthenticationError, AuthenticationMiddlew
 from tests.conftest import inmemory_user_provider
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -20,7 +20,7 @@ async def app_view(request: Request):
     )
 
 
-def test_middleware_ignores_url_patterns():
+def test_middleware_ignores_url_patterns() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -47,7 +47,7 @@ def test_middleware_ignores_url_patterns():
     assert response.json()['is_authenticated'] is False
 
 
-def test_middleware_protects_only_specific_url_patterns():
+def test_middleware_protects_only_specific_url_patterns() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -81,7 +81,7 @@ def test_middleware_protects_only_specific_url_patterns():
     assert response.json()['is_authenticated'] is False
 
 
-def test_middleware_mode_raises():
+def test_middleware_mode_raises() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -106,7 +106,7 @@ def test_middleware_mode_raises():
     assert str(ex.value) == 'Could not authenticate request.'
 
 
-def test_middleware_redirect():
+def test_middleware_redirect() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -133,7 +133,7 @@ def test_middleware_redirect():
     assert response.headers['location'] == '/login'
 
 
-def test_middleware_redirect_requires_url():
+def test_middleware_redirect_requires_url() -> None:
     with pytest.raises(ValueError) as ex:
         app = Starlette(
             debug=True,
@@ -158,7 +158,7 @@ def test_middleware_redirect_requires_url():
     )
 
 
-def test_middleware_does_nothing():
+def test_middleware_does_nothing() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -182,7 +182,7 @@ def test_middleware_does_nothing():
     assert response.json()['is_authenticated'] is False
 
 
-def test_middleware_unsupported_action():
+def test_middleware_unsupported_action() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -208,7 +208,7 @@ def test_middleware_unsupported_action():
     assert str(ex.value) == ('Unsupported action passed to AuthenticationMiddleware via on_failure argument: unknown.')
 
 
-def test_middleware_raises_if_both_include_and_exclude_patterns_passed():
+def test_middleware_raises_if_both_include_and_exclude_patterns_passed() -> None:
     with pytest.raises(ValueError) as ex:
         Starlette(
             debug=True,

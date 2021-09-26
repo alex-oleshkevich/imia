@@ -9,7 +9,7 @@ from imia import AuthenticationMiddleware, HTTPBasicAuthenticator
 from tests.conftest import inmemory_user_provider, password_verifier
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -19,7 +19,7 @@ async def app_view(request: Request):
     )
 
 
-def test_basic_authentication():
+def test_basic_authentication() -> None:
     """WWW-Basic authentication uses user data from URL to obtain user ID."""
     app = Starlette(
         debug=True,
@@ -42,7 +42,7 @@ def test_basic_authentication():
     assert response.json()['user_name'] == 'Root'
 
 
-def test_basic_authentication_with_invalid_password():
+def test_basic_authentication_with_invalid_password() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -62,7 +62,7 @@ def test_basic_authentication_with_invalid_password():
     assert response.json()['is_authenticated'] is False
 
 
-def test_basic_authentication_with_empty_password():
+def test_basic_authentication_with_empty_password() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -82,7 +82,7 @@ def test_basic_authentication_with_empty_password():
     assert response.json()['is_authenticated'] is False
 
 
-def test_basic_authentication_without_credentials():
+def test_basic_authentication_without_credentials() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -102,7 +102,7 @@ def test_basic_authentication_without_credentials():
     assert 'www-authenticate' in response.headers
 
 
-def test_basic_authentication_with_invalid_user():
+def test_basic_authentication_with_invalid_user() -> None:
     app = Starlette(
         debug=True,
         routes=[

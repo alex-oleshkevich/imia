@@ -9,7 +9,7 @@ from imia import APIKeyAuthenticator, AuthenticationMiddleware, TokenAuthenticat
 from tests.conftest import inmemory_user_provider
 
 
-async def app_view(request: Request):
+async def app_view(request: Request) -> JSONResponse:
     return JSONResponse(
         {
             'is_authenticated': request.auth.is_authenticated,
@@ -19,7 +19,7 @@ async def app_view(request: Request):
     )
 
 
-def test_authenticates_successfully():
+def test_authenticates_successfully() -> None:
     app = Starlette(
         debug=True,
         routes=[
@@ -43,7 +43,7 @@ def test_authenticates_successfully():
     assert response.json()['is_authenticated'] is True
 
 
-def test_not_authenticates():
+def test_not_authenticates() -> None:
     app = Starlette(
         debug=True,
         routes=[
