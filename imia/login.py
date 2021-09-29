@@ -63,7 +63,7 @@ async def login_user(request: HTTPConnection, user: UserLike, secret_key: str) -
             await request.session.regenerate_id()  # type: ignore
 
     user_token = UserToken(user=user, state=LoginState.FRESH)
-    request.session[SESSION_KEY] = str(user.get_id())
+    request.session[SESSION_KEY] = user.get_id()
     request.session[SESSION_HASH] = user_password_hmac
     request.scope['auth'] = user_token
     return user_token
