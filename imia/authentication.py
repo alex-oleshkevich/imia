@@ -20,10 +20,11 @@ class WWWAuthenticationRequiredError(Exception):
 
 
 class BaseAuthenticator(abc.ABC):  # pragma: no cover
-    """Authenticators load user using request data.
-    For example, an authenticate may use session to get user's ID
-    and load user instance from a user provider.
-    Another example can be when you load a user by API token read from headers.
+    """
+    Authenticators load user using request data. For example, an authenticate
+    may use session to get user's ID and load user instance from a user
+    provider. Another example can be when you load a user by API token read from
+    headers.
 
     Authenticators are part of AuthenticationMiddleware.
     """
@@ -88,8 +89,8 @@ class SessionAuthenticator(BaseAuthenticator):
 
 
 class TokenAuthenticator(BaseAuthenticator):
-    """Token authenticator reads Authorization header
-    to obtain an API token and load a user using it."""
+    """Token authenticator reads Authorization header to obtain an API token and
+    load a user using it."""
 
     def __init__(self, user_provider: UserProvider, token_name: str) -> None:
         self.user_provider = user_provider
@@ -110,15 +111,20 @@ class TokenAuthenticator(BaseAuthenticator):
 
 
 class BearerAuthenticator(TokenAuthenticator):
-    """Bearer authenticator is a subtype of TokenAuthenticator designed for Bearer token types."""
+    """Bearer authenticator is a subtype of TokenAuthenticator designed for
+    Bearer token types."""
 
     def __init__(self, user_provider: UserProvider) -> None:
         super().__init__(user_provider, 'Bearer')
 
 
 class APIKeyAuthenticator(BaseAuthenticator):
-    """API key is a simple way to use token authentication.
-    The basic principle is to read token from query params, and fallback to headers if none found."""
+    """
+    API key is a simple way to use token authentication.
+
+    The basic principle is to read token from query params, and fallback to
+    headers if none found.
+    """
 
     def __init__(self, user_provider: UserProvider, query_param: str = 'apikey', header_name: str = 'X-Api-Key'):
         self.user_provider = user_provider
@@ -140,7 +146,10 @@ class APIKeyAuthenticator(BaseAuthenticator):
 
 
 class AuthenticationMiddleware:
-    """Authenticator middleware will load a user from the request using authenticators.
+    """
+    Authenticator middleware will load a user from the request using
+    authenticators.
+
     If the user can be found Request.auth property will become available.
     """
 

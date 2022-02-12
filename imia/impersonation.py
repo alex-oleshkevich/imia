@@ -15,8 +15,8 @@ class ImpersonationNotAllowedError(AuthenticationError):
 
 
 class ImpersonationNotActiveError(AuthenticationError):
-    """Raised when you try to access impersonation related data
-    but the impersonation is not active."""
+    """Raised when you try to access impersonation related data but the
+    impersonation is not active."""
 
 
 def impersonate(request: HTTPConnection, user: UserLike) -> None:
@@ -102,10 +102,14 @@ class ImpersonationMiddleware:
         exit_impersonation(request)
 
     def _can_enter_impersonation(self, request: HTTPConnection) -> bool:
-        """Test if current user can impersonate other.
-        Here are two checks. The first one to lookup a presence of self._scope in token scopes.
-        The other one is to provide guard functions that must return boolean value.
-        The guard function take the precedence when available."""
+        """
+        Test if current user can impersonate other.
+
+        Here are two checks. The first one to lookup a presence of self._scope
+        in token scopes. The other one is to provide guard functions that must
+        return boolean value. The guard function take the precedence when
+        available.
+        """
         if self._guard_fn:
             # forbid impersonation if guard function returns False
             return self._guard_fn(request.auth, request)

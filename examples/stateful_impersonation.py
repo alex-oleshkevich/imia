@@ -14,7 +14,11 @@ from imia import AuthenticationMiddleware, ImpersonationMiddleware, InMemoryProv
 
 @dataclass
 class User:
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     identifier: str = 'root@localhost'
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
@@ -92,7 +96,11 @@ def index_view(request: Request) -> HTMLResponse:
 
 
 async def app_view(request: Request) -> HTMLResponse:
-    """This is our protected area. Only authorized users allowed."""
+    """
+    This is our protected area.
+
+    Only authorized users allowed.
+    """
     return HTMLResponse(
         """
         Hi %s! Your id is %s

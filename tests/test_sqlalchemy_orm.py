@@ -3,35 +3,39 @@ import pytest
 import sqlalchemy as sa
 import typing as t
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import DeclarativeMeta, declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from imia.ext.sqlalchemy import SQLAlchemyORMUserProvider
 
 engine = create_async_engine('sqlite+aiosqlite:///:memory:')
 session_maker = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-Base: DeclarativeMeta = declarative_base()
+Base = declarative_base()
 
 
 class _User(Base):
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     __tablename__ = 'sa_orm_users'
 
     id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String(length=255))
-    email = sa.Column(sa.String(length=255))
-    password = sa.Column(sa.String(length=255))
+    name = sa.Column(sa.String(length=255), nullable=False)
+    email = sa.Column(sa.String(length=255), nullable=False)
+    password = sa.Column(sa.String(length=255), nullable=False)
     api_token = sa.Column(sa.String(length=255))
 
     def get_display_name(self) -> str:
-        return self.name
+        return self.name or ''
 
     def get_id(self) -> int:
         assert self.id
         return self.id
 
     def get_hashed_password(self) -> str:
-        return self.password
+        return self.password or ''
 
     def get_scopes(self) -> list:
         return []

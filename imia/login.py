@@ -29,9 +29,11 @@ def _get_password_hmac_from_user(user: UserLike, secret: str) -> str:
 
 
 def _check_for_other_user_session(connection: HTTPConnection, user: UserLike, user_password_hmac: str) -> None:
-    """There is a chance that session may already contain data of another user.
-    This may happen if you don't clear session property on logout, or SESSION_KEY is set from the outside.
-    In this case we need to run several security checks to ensure that SESSION_KEY is valid.
+    """
+    There is a chance that session may already contain data of another user.
+    This may happen if you don't clear session property on logout, or
+    SESSION_KEY is set from the outside. In this case we need to run several
+    security checks to ensure that SESSION_KEY is valid.
 
     Our plan:
         * if SESSION_KEY and ID of current user is not the same -> risk of session re-usage

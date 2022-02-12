@@ -53,7 +53,8 @@ async def set_user_view(request: Request) -> Response:
 
 
 async def set_attacker_view(request: Request) -> Response:
-    """This view forcibly sets Attacker user that has same ID but different password."""
+    """This view forcibly sets Attacker user that has same ID but different
+    password."""
     await login_user(request, Attacker(), '')
     return JSONResponse({})
 

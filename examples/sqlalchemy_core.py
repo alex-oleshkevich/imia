@@ -1,5 +1,5 @@
 """
-This example requires SQLAlchemy 1.4+ with aiosqlite installed
+This example requires SQLAlchemy 1.4+ with aiosqlite installed.
 
 pip install sqlalchemy aiosqlite
 """
@@ -37,7 +37,11 @@ users_table = sa.Table(
 
 @dataclass
 class User:
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     id: t.Optional[int] = None
     name: str = ""
