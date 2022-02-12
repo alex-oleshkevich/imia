@@ -64,8 +64,8 @@ async def login_view(request: Request):
 
 ## Login guards
 
-Login guards can protect login page usign complex custom logic defined by the developer. For example, you may use them
-to prevent bruteforce attacks, prevents inactive users from log in, and can perform other security related actions.
+Login guards can protect login page using complex custom logic defined by the developer. For example, you may use them
+to prevent bruteforce attacks, prevent inactive users from log in, and so on.
 
 The login guard is an async callable that should raise any exception to abort login flow.
 
