@@ -1,3 +1,4 @@
+import anyio
 import hashlib
 import hmac
 import secrets
@@ -5,7 +6,7 @@ import typing as t
 from starlette.requests import HTTPConnection
 
 from .exceptions import SessionReusageError
-from .protocols import PasswordVerifier, UserLike
+from .protocols import LoginGuard, PasswordVerifier, UserLike
 from .user_providers import UserProvider
 from .user_token import AnonymousUser, LoginState, UserToken
 
@@ -29,9 +30,11 @@ def _get_password_hmac_from_user(user: UserLike, secret: str) -> str:
 
 
 def _check_for_other_user_session(connection: HTTPConnection, user: UserLike, user_password_hmac: str) -> None:
-    """There is a chance that session may already contain data of another user.
-    This may happen if you don't clear session property on logout, or SESSION_KEY is set from the outside.
-    In this case we need to run several security checks to ensure that SESSION_KEY is valid.
+    """
+    There is a chance that session may already contain data of another user.
+    This may happen if you don't clear session property on logout, or
+    SESSION_KEY is set from the outside. In this case we need to run several
+    security checks to ensure that SESSION_KEY is valid.
 
     Our plan:
         * if SESSION_KEY and ID of current user is not the same -> risk of session re-usage
@@ -77,8 +80,15 @@ class LoginManager:
         self._password_verifier = password_verifier
         self._secret_key = secret_key
 
-    async def login(self, request: HTTPConnection, username: str, password: str) -> UserToken:
+    async def login(
+        self, request: HTTPConnection, username: str, password: str, guards: t.Optional[t.Iterable[LoginGuard]] = None
+    ) -> UserToken:
         user = await self._user_provider.find_by_username(username)
+        guards = guards or []
+        async with anyio.create_task_group() as tg:
+            for guard in guards:
+                tg.start_soon(guard, request, user)
+
         if user is not None and self._password_verifier.verify(password, user.get_hashed_password()):
             return await login_user(request, user, self._secret_key)
         return UserToken(user=AnonymousUser(), state=LoginState.ANONYMOUS)

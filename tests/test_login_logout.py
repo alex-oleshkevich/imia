@@ -10,8 +10,13 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 from starsessions import InMemoryBackend, SessionMiddleware as StarSessionMiddleware
 
-from imia import LoginManager, get_session_auth_id, login_user
+from imia import AuthenticationError, LoginManager, UserLike, get_session_auth_id, login_user
 from tests.conftest import User, inmemory_user_provider, password_verifier
+
+
+async def login_guard(request: Request, user: UserLike) -> None:
+    """Guard that simply denies all login attempts."""
+    raise AuthenticationError()
 
 
 @dataclass
@@ -36,6 +41,15 @@ async def login_view(request: Request) -> Response:
     return RedirectResponse('/login?error=1')
 
 
+async def login_with_guards_view(request: Request) -> Response:
+    form_data = await request.form()
+    email = form_data.get('email')
+    password = form_data.get('password')
+    login_manager = LoginManager(inmemory_user_provider, password_verifier)
+    await login_manager.login(request, email, password, guards=[login_guard])
+    return RedirectResponse('/')  # login must raise
+
+
 async def logout_view(request: Request) -> Response:
     login_manager = LoginManager(inmemory_user_provider, password_verifier)
     await login_manager.logout(request)
@@ -53,7 +67,8 @@ async def set_user_view(request: Request) -> Response:
 
 
 async def set_attacker_view(request: Request) -> Response:
-    """This view forcibly sets Attacker user that has same ID but different password."""
+    """This view forcibly sets Attacker user that has same ID but different
+    password."""
     await login_user(request, Attacker(), '')
     return JSONResponse({})
 
@@ -67,6 +82,7 @@ app = Starlette(
     routes=[
         Route('/', index_view),
         Route('/login', login_view, methods=['POST']),
+        Route('/login_guards', login_with_guards_view, methods=['POST']),
         Route('/logout', logout_view, methods=['POST']),
         Route('/app', app_view),
         Route('/attack', set_attacker_view),
@@ -83,6 +99,7 @@ app2 = Starlette(
     routes=[
         Route('/', index_view),
         Route('/login', login_view, methods=['POST']),
+        Route('/login_guards', login_with_guards_view, methods=['POST']),
         Route('/logout', logout_view, methods=['POST']),
         Route('/app', app_view),
         Route('/attack', set_attacker_view),
@@ -103,6 +120,13 @@ def test_login(app: Starlette) -> None:
     assert response.headers['location'] == '/app'
     response = test_client.get('/app')
     assert response.json().get('session_auth_id') == 'root@localhost'
+
+
+@pytest.mark.parametrize('app', [app, app2])
+def test_login_guards(app: Starlette) -> None:
+    with pytest.raises(AuthenticationError):
+        test_client = TestClient(app)
+        test_client.post('/login_guards', data={'email': 'root@localhost', 'password': 'pa$$word'})
 
 
 @pytest.mark.parametrize('app', [app, app2])

@@ -62,6 +62,55 @@ async def login_view(request: Request):
             return RedirectResponse('/login?error=invalid_credentials', status_code=302)
 ```
 
+## Login guards
+
+Login guards can protect login page usign complex custom logic defined by the developer. For example, you may use them
+to prevent bruteforce attacks, prevents inactive users from log in, and can perform other security related actions.
+
+The login guard is an async callable that should raise any exception to abort login flow.
+
+```python
+from imia import LoginManager
+
+login_manager = LoginManager(...)
+
+
+class TooManyAttempts(Exception): ...
+
+
+class InactiveUser(Exception): ...
+
+
+def throttle_logins(request, user):
+    if user.login_attemts > 3:
+        raise TooManyAttempts()
+
+
+def require_active_user(request, user):
+    if not user.is_active:
+        raise InactiveUser()
+
+
+async def logout_view(request):
+    if request.method == 'POST':
+        data = await request.form()
+        email = data['email']
+        password = data['password']
+
+        try:
+            user_token = await login_manager.login(
+                request, email, password, guards=[throttle_logins, require_active_user()]
+            )
+            if user_token:
+                return RedirectResponse('/app', status_code=302)
+            else:
+                return RedirectResponse('/login?error=invalid_credentials', status_code=302)
+        except TooManyAttempts:
+            return RedirectResponse('/login?error=too_many_attempts', status_code=302)
+        except InactiveUser:
+            return RedirectResponse('/login?error=inactive_user', status_code=302)
+```
+
 ## Logout usage
 
 With `logout(request) -> None` method of LoginManager you can terminate user's session.

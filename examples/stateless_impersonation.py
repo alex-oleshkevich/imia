@@ -13,7 +13,11 @@ from imia import APIKeyAuthenticator, AuthenticationMiddleware, ImpersonationMid
 
 @dataclass
 class User:
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     identifier: str = 'root@localhost'
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word

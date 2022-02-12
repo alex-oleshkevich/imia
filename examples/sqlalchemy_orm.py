@@ -1,5 +1,5 @@
 """
-This example requires SQLAlchemy 1.4+ with aiosqlite installed
+This example requires SQLAlchemy 1.4+ with aiosqlite installed.
 
 pip install sqlalchemy aiosqlite
 """
@@ -7,7 +7,7 @@ import os
 import sqlalchemy as sa
 from passlib.hash import pbkdf2_sha1
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import DeclarativeMeta, declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.requests import Request
@@ -21,11 +21,15 @@ DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite+aiosqlite:///:memory:')
 
 engine = create_async_engine(DATABASE_URL)
 async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-Base: DeclarativeMeta = declarative_base()
+Base = declarative_base()
 
 
 class User(Base):
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     __tablename__ = 'users'
 
@@ -36,14 +40,14 @@ class User(Base):
     api_token = sa.Column(sa.String)
 
     def get_display_name(self) -> str:
-        return self.name
+        return self.name or ''
 
     def get_id(self) -> int:
         assert self.id
         return self.id
 
     def get_hashed_password(self) -> str:
-        return self.password
+        return self.password or ''
 
     def get_scopes(self) -> list:
         return []

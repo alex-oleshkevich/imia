@@ -63,7 +63,8 @@ def test_stateless_impersonation() -> None:
 
 
 def test_stateful_impersonation() -> None:
-    """With session the impersonation status must be kept between requests until deactivated."""
+    """With session the impersonation status must be kept between requests until
+    deactivated."""
     app = Starlette(
         debug=True,
         routes=[

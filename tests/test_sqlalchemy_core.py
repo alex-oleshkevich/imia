@@ -22,7 +22,11 @@ engine = create_async_engine('sqlite+aiosqlite:///:memory:')
 
 @dataclass
 class _User:
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     id: t.Optional[int] = None
     name: str = ""

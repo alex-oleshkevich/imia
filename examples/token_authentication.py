@@ -12,7 +12,11 @@ from imia import AuthenticationMiddleware, BearerAuthenticator, InMemoryProvider
 
 @dataclass
 class User:
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     identifier: str = 'root@localhost'
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
@@ -42,7 +46,8 @@ def whoami_view(request: Request) -> JSONResponse:
     """
     curl -H 'Authorization: Bearer root@localhost'  http://localhost:7000/
 
-    token, id and email is the same for this example and equals to "root@localhost"
+    token, id and email is the same for this example and equals to
+    "root@localhost"
     """
     return JSONResponse(
         {

@@ -13,7 +13,11 @@ from imia import AuthenticationMiddleware, HTTPBasicAuthenticator, InMemoryProvi
 
 @dataclass
 class User:
-    """This is our user model. Any user model must implement UserLike protocol."""
+    """
+    This is our user model.
+
+    Any user model must implement UserLike protocol.
+    """
 
     identifier: str = 'root@localhost'
     password: str = '$pbkdf2$131000$xfhfaw1hrNU6ByAkBKA0Zg$qT.ZZYscSAUS4Btk/Q2rkAZQc5E'  # pa$$word
@@ -41,11 +45,12 @@ user_provider = InMemoryProvider({'root@localhost': User(scopes=['auth:impersona
 
 def whoami_view(request: Request) -> JSONResponse:
     """
-    GET http://root%40localhost:pa$$word@localhost:7000/
-    curl 'http://root%40localhost:pa$$word@localhost:7000/'
-    curl --user 'root@localhost:pa$$word' http://localhost:7000
+    GET http://root%40localhost:pa$$word@localhost:7000/ curl
+    'http://root%40localhost:pa$$word@localhost:7000/' curl --user
+    'root@localhost:pa$$word' http://localhost:7000.
 
-    token, id and email is the same for this example and equals to "root@localhost"
+    token, id and email is the same for this example and equals to
+    "root@localhost"
     """
     return JSONResponse(
         {

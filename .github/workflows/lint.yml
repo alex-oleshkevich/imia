@@ -41,7 +41,7 @@ jobs:
 
             - name: Lint with black
               run: |
-                  black --config=pyproject.toml
+                  black --config=pyproject.toml --check imia/ tests/
 
             - name: Test with pytest
               run: |

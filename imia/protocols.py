@@ -1,5 +1,5 @@
 import typing as t
-from starlette.requests import HTTPConnection
+from starlette.requests import HTTPConnection, Request
 
 
 class PasswordVerifier(t.Protocol):  # pragma: no cover
@@ -7,17 +7,32 @@ class PasswordVerifier(t.Protocol):  # pragma: no cover
         ...
 
 
-class UserLike(t.Protocol):  # pragma: no cover_
+class HasDisplayName(t.Protocol):  # pragma: no cover
     def get_display_name(self) -> str:
         ...
 
+
+class HasId(t.Protocol):  # pragma: no cover
     def get_id(self) -> t.Any:
         ...
 
+
+class HasHashedPassoword(t.Protocol):  # pragma: no cover
     def get_hashed_password(self) -> str:
         ...
 
+
+class HasScopes(t.Protocol):  # pragma: no cover
     def get_scopes(self) -> t.List[str]:
+        ...
+
+
+class UserLike(HasId, HasScopes, HasHashedPassoword, HasDisplayName, t.Protocol):  # pragma: no cover
+    ...
+
+
+class LoginGuard(t.Protocol):
+    async def __call__(self, request: Request, user: UserLike) -> None:
         ...
 
 

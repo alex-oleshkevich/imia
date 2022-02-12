@@ -28,8 +28,11 @@ class UserToken:
 
     @property
     def is_authenticated(self) -> bool:
-        """Get authentication state.
-        Returns True is user is authenticated."""
+        """
+        Get authentication state.
+
+        Returns True is user is authenticated.
+        """
         return self.state != LoginState.ANONYMOUS
 
     @property
@@ -44,8 +47,11 @@ class UserToken:
 
     @property
     def scopes(self) -> t.List[str]:
-        """Return permission scopes of current user.
-        Returns an empty list for unauthenticated user."""
+        """
+        Return permission scopes of current user.
+
+        Returns an empty list for unauthenticated user.
+        """
         return self.user.get_scopes()
 
     @property
@@ -55,7 +61,7 @@ class UserToken:
 
     @property
     def user(self) -> UserLike:
-        """Get an user model associated"""
+        """Get an user model associated."""
         return self._user
 
     @property
