@@ -2,7 +2,7 @@ import anyio
 import hashlib
 import hmac
 import secrets
-import typing as t
+import typing
 from starlette.requests import HTTPConnection
 
 from .exceptions import SessionReusageError
@@ -15,11 +15,11 @@ SESSION_HASH = '_auth_user_hash'
 HASHING_ALGORITHM = 'sha1'
 
 
-def get_session_auth_id(connection: HTTPConnection) -> t.Optional[str]:
+def get_session_auth_id(connection: HTTPConnection) -> typing.Optional[str]:
     return connection.session.get(SESSION_KEY)
 
 
-def get_session_auth_hash(connection: HTTPConnection) -> t.Optional[str]:
+def get_session_auth_hash(connection: HTTPConnection) -> typing.Optional[str]:
     return connection.session.get(SESSION_HASH)
 
 
@@ -81,9 +81,13 @@ class LoginManager:
         self._secret_key = secret_key
 
     async def login(
-        self, request: HTTPConnection, username: str, password: str, guards: t.Optional[t.Iterable[LoginGuard]] = None
+        self,
+        request: HTTPConnection,
+        username: str,
+        password: str,
+        guards: typing.Optional[typing.Iterable[LoginGuard]] = None,
     ) -> UserToken:
-        user = await self._user_provider.find_by_username(username)
+        user = await self._user_provider.find_by_username(request, username)
         guards = guards or []
         async with anyio.create_task_group() as tg:
             for guard in guards:

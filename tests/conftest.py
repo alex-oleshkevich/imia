@@ -1,9 +1,23 @@
 import dataclasses
 from dataclasses import dataclass
 
+import pytest
 import typing as t
+from starlette.requests import HTTPConnection
 
 from imia import InMemoryProvider
+
+
+@pytest.fixture
+def http_scope() -> dict:
+    return {
+        'type': 'http',
+    }
+
+
+@pytest.fixture()
+def http_connection(http_scope: dict) -> HTTPConnection:
+    return HTTPConnection(http_scope)
 
 
 @dataclass

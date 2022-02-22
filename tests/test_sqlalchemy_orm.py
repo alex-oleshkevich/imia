@@ -4,6 +4,7 @@ import sqlalchemy as sa
 import typing as t
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from starlette.requests import HTTPConnection
 
 from imia.ext.sqlalchemy import SQLAlchemyORMUserProvider
 
@@ -68,30 +69,30 @@ async def create_tables() -> t.AsyncGenerator:
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_orm_user_provider_find_by_id() -> None:
+async def test_sqlalchemy_orm_user_provider_find_by_id(http_connection: HTTPConnection) -> None:
     provider = SQLAlchemyORMUserProvider(session_maker, _User)
-    user = await provider.find_by_id(2)
+    user = await provider.find_by_id(http_connection, 2)
     assert isinstance(user, _User)
     assert user.id == 2
 
-    assert await provider.find_by_id(-1) is None
+    assert await provider.find_by_id(http_connection, -1) is None
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_orm_user_provider_find_by_username() -> None:
+async def test_sqlalchemy_orm_user_provider_find_by_username(http_connection: HTTPConnection) -> None:
     provider = SQLAlchemyORMUserProvider(session_maker, _User)
-    user = await provider.find_by_username('two@example.com')
+    user = await provider.find_by_username(http_connection, 'two@example.com')
     assert isinstance(user, _User)
     assert user.id == 2
 
-    assert await provider.find_by_username('unknown@example.com') is None
+    assert await provider.find_by_username(http_connection, 'unknown@example.com') is None
 
 
 @pytest.mark.asyncio
-async def test_sqlalchemy_orm_user_provider_find_by_token() -> None:
+async def test_sqlalchemy_orm_user_provider_find_by_token(http_connection: HTTPConnection) -> None:
     provider = SQLAlchemyORMUserProvider(session_maker, _User)
-    user = await provider.find_by_token('token2')
+    user = await provider.find_by_token(http_connection, 'token2')
     assert isinstance(user, _User)
     assert user.id == 2
 
-    assert await provider.find_by_token('unknown_token') is None
+    assert await provider.find_by_token(http_connection, 'unknown_token') is None

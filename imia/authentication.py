@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import base64
 import re
-import typing as t
+import typing
 from starlette.requests import HTTPConnection
 from starlette.responses import RedirectResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -21,7 +21,7 @@ class WWWAuthenticationRequiredError(Exception):
 
 class BaseAuthenticator(abc.ABC):  # pragma: no cover
     """
-    Authenticators load user using request data. For example, an authenticate
+    Authenticators load user using request data. For example, an authenticator
     may use session to get user's ID and load user instance from a user
     provider. Another example can be when you load a user by API token read from
     headers.
@@ -29,10 +29,10 @@ class BaseAuthenticator(abc.ABC):  # pragma: no cover
     Authenticators are part of AuthenticationMiddleware.
     """
 
-    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+    async def authenticate(self, connection: HTTPConnection) -> typing.Optional[UserLike]:
         raise NotImplementedError()
 
-    def get_auth_header(self) -> t.Optional[str]:
+    def get_auth_header(self) -> typing.Optional[str]:
         return None
 
 
@@ -49,7 +49,7 @@ class HTTPBasicAuthenticator(BaseAuthenticator):
         self.password_verifier = password_verifier
         self.realm = realm
 
-    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+    async def authenticate(self, connection: HTTPConnection) -> typing.Optional[UserLike]:
         header = connection.headers.get('authorization')
         if not header or not header.lower().startswith('basic'):
             raise WWWAuthenticationRequiredError()
@@ -61,7 +61,7 @@ class HTTPBasicAuthenticator(BaseAuthenticator):
         except ValueError:
             return None
 
-        user = await self.user_provider.find_by_username(username)
+        user = await self.user_provider.find_by_username(connection, username)
         if not user:
             return None
 
@@ -70,7 +70,7 @@ class HTTPBasicAuthenticator(BaseAuthenticator):
 
         return None
 
-    def get_auth_header(self) -> t.Optional[str]:
+    def get_auth_header(self) -> typing.Optional[str]:
         return 'Basic realm="%s"' % self.realm
 
 
@@ -80,12 +80,12 @@ class SessionAuthenticator(BaseAuthenticator):
     def __init__(self, user_provider: UserProvider) -> None:
         self.user_provider = user_provider
 
-    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+    async def authenticate(self, connection: HTTPConnection) -> typing.Optional[UserLike]:
         user_id = get_session_auth_id(connection)
         if user_id is None:
             return None
 
-        return await self.user_provider.find_by_id(user_id)
+        return await self.user_provider.find_by_id(connection, user_id)
 
 
 class TokenAuthenticator(BaseAuthenticator):
@@ -96,7 +96,7 @@ class TokenAuthenticator(BaseAuthenticator):
         self.user_provider = user_provider
         self.token_name = token_name
 
-    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+    async def authenticate(self, connection: HTTPConnection) -> typing.Optional[UserLike]:
         header = connection.headers.get('authorization')
         if not header:
             return None
@@ -107,7 +107,7 @@ class TokenAuthenticator(BaseAuthenticator):
         else:
             if token_name.lower() != self.token_name.lower():
                 return None
-            return await self.user_provider.find_by_token(token_value)
+            return await self.user_provider.find_by_token(connection, token_value)
 
 
 class BearerAuthenticator(TokenAuthenticator):
@@ -131,17 +131,17 @@ class APIKeyAuthenticator(BaseAuthenticator):
         self.query_param = query_param
         self.header_name = header_name
 
-    async def authenticate(self, connection: HTTPConnection) -> t.Optional[UserLike]:
+    async def authenticate(self, connection: HTTPConnection) -> typing.Optional[UserLike]:
         token = self._get_token_from_query_params(connection)
         token = token or self._get_token_from_header(connection)
         if token:
-            return await self.user_provider.find_by_token(token)
+            return await self.user_provider.find_by_token(connection, token)
         return None
 
-    def _get_token_from_query_params(self, connection: HTTPConnection) -> t.Optional[str]:
+    def _get_token_from_query_params(self, connection: HTTPConnection) -> typing.Optional[str]:
         return connection.query_params.get(self.query_param)
 
-    def _get_token_from_header(self, connection: HTTPConnection) -> t.Optional[str]:
+    def _get_token_from_header(self, connection: HTTPConnection) -> typing.Optional[str]:
         return connection.headers.get(self.header_name)
 
 
@@ -156,11 +156,11 @@ class AuthenticationMiddleware:
     def __init__(
         self,
         app: ASGIApp,
-        authenticators: t.List[BaseAuthenticator],
+        authenticators: typing.List[BaseAuthenticator],
         on_failure: str = "do_nothing",  # one of: raise, redirect, do_nothing
         redirect_to: str = "/",
-        exclude_patterns: t.List[t.Union[str, t.Pattern]] = None,
-        include_patterns: t.List[t.Union[str, t.Pattern]] = None,
+        exclude_patterns: typing.List[typing.Union[str, typing.Pattern]] = None,
+        include_patterns: typing.List[typing.Union[str, typing.Pattern]] = None,
     ) -> None:
         if on_failure == 'redirect' and redirect_to is None:
             raise ValueError(
@@ -190,7 +190,7 @@ class AuthenticationMiddleware:
         if self._should_interrupt(request):
             return await self._app(scope, receive, send)
 
-        user: t.Optional[UserLike] = None
+        user: typing.Optional[UserLike] = None
         for authenticator in self._authenticators:
             try:
                 user = await authenticator.authenticate(request)

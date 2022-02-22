@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-import typing as t
+import typing
 
 from .protocols import UserLike
 
@@ -41,12 +41,12 @@ class UserToken:
         return not self.is_authenticated
 
     @property
-    def original_user_id(self) -> t.Optional[t.Any]:
+    def original_user_id(self) -> typing.Optional[typing.Any]:
         """Get ID of user being impersonated."""
         return self.original_user_token.user.get_id() if self.original_user_token else None
 
     @property
-    def scopes(self) -> t.List[str]:
+    def scopes(self) -> typing.List[str]:
         """
         Return permission scopes of current user.
 
@@ -55,7 +55,7 @@ class UserToken:
         return self.user.get_scopes()
 
     @property
-    def user_id(self) -> t.Any:
+    def user_id(self) -> typing.Any:
         """Get ID of current user."""
         return self.user.get_id()
 
@@ -93,11 +93,11 @@ class AnonymousUser:
     def get_display_name(self) -> str:
         return 'Anonymous'
 
-    def get_id(self) -> t.Any:
+    def get_id(self) -> typing.Any:
         return None
 
     def get_hashed_password(self) -> str:
         return ''
 
-    def get_scopes(self) -> t.List[str]:
+    def get_scopes(self) -> typing.List[str]:
         return []

@@ -1,4 +1,4 @@
-import typing as t
+import typing
 from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -52,7 +52,7 @@ class ImpersonationMiddleware:
         self,
         app: ASGIApp,
         user_provider: UserProvider,
-        guard_fn: t.Callable[[UserToken, HTTPConnection], bool] = None,
+        guard_fn: typing.Callable[[UserToken, HTTPConnection], bool] = None,
         enter_query_param: str = "_impersonate",
         exit_user_name: str = "__exit__",
         scope: str = 'auth:impersonate_others',
@@ -94,7 +94,7 @@ class ImpersonationMiddleware:
         await self._app(scope, receive, send)
 
     async def _enter_impersonation(self, request: HTTPConnection, user_id: str) -> None:
-        user = await self._user_provider.find_by_id(user_id)
+        user = await self._user_provider.find_by_id(request, user_id)
         if user:
             impersonate(request, user)
 
@@ -117,7 +117,7 @@ class ImpersonationMiddleware:
         # user must have "can_impersonate" scope
         return self._scope in request.auth
 
-    def _detect_action(self, request: HTTPConnection) -> t.Tuple[str, str]:
+    def _detect_action(self, request: HTTPConnection) -> typing.Tuple[str, str]:
         username = request.query_params.get(self._enter_query_param)
         if username is None:
             impersonation_target = request.scope.get('session', {}).get(IMPERSONATION_SESSION_KEY)
