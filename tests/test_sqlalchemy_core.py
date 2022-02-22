@@ -22,7 +22,7 @@ engine = create_async_engine('sqlite+aiosqlite:///:memory:')
 
 
 @dataclass
-class _User:
+class _User:  # pragma: no cover_
     """
     This is our user model.
 

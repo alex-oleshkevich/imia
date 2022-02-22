@@ -6,7 +6,7 @@ from imia import AnonymousUser, LoginState, UserToken
 
 
 @dataclasses.dataclass
-class User:
+class User:  # pragma: no cover_
     identifier: str = 'root@localhost'
     password: str = 'pa$$word'
     scopes: t.List[str] = dataclasses.field(default_factory=list)

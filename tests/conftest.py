@@ -21,7 +21,7 @@ def http_connection(http_scope: dict) -> HTTPConnection:
 
 
 @dataclass
-class User:
+class User:  # pragma: no cover_
     identifier = 'root@localhost'
     password = 'pa$$word'
     scopes: t.List[str] = dataclasses.field(default_factory=list)

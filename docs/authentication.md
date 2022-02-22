@@ -151,6 +151,31 @@ def app_view(request):
 
 If you want more details about authentication state, inpect the [user token](user_token.md).
 
+
+## Authenticating manually
+
+Instead of using middleware, you can use `imia.authentication.authenticate` function to manually authenticate the request.
+In this case, you can run it anywhere in the code and remove `AuthenticationMiddleware` from the middleware list.
+
+```python
+from imia.authentication import authenticate, SessionAuthenticator, BearerAuthenticator
+from starlette.responses import PlainTextResponse
+
+authenticators = [
+    SessionAuthenticator(...),
+    BearerAuthenticator(...),
+]
+
+async def index_view(request):
+    user_token = await authenticate(request, authenticators)
+    if user_token:
+        return PlainTextResponse('you are authenticated')
+    else:
+        return PlainTextResponse('you are not authenticated')
+```
+
+> Note, that `request.auth` won't be filled in this case and may raise exception.
+
 ## Next topic
 
 The next topic of this guide will describe [built-in authenticators](authenticators.md).

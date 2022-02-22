@@ -16,7 +16,8 @@ from .user_token import AnonymousUser, LoginState, UserToken
 
 
 class WWWAuthenticationRequiredError(Exception):
-    pass
+    def __init__(self, auth_header: str) -> None:
+        self.header = auth_header
 
 
 class BaseAuthenticator(abc.ABC):  # pragma: no cover
@@ -52,7 +53,7 @@ class HTTPBasicAuthenticator(BaseAuthenticator):
     async def authenticate(self, connection: HTTPConnection) -> typing.Optional[UserLike]:
         header = connection.headers.get('authorization')
         if not header or not header.lower().startswith('basic'):
-            raise WWWAuthenticationRequiredError()
+            raise WWWAuthenticationRequiredError(self.get_auth_header())
 
         try:
             username, password = base64.b64decode(header[6:]).decode().split(':')
@@ -70,7 +71,7 @@ class HTTPBasicAuthenticator(BaseAuthenticator):
 
         return None
 
-    def get_auth_header(self) -> typing.Optional[str]:
+    def get_auth_header(self) -> str:
         return 'Basic realm="%s"' % self.realm
 
 
@@ -145,6 +146,25 @@ class APIKeyAuthenticator(BaseAuthenticator):
         return connection.headers.get(self.header_name)
 
 
+async def authenticate(
+    connection: HTTPConnection,
+    authenticators: typing.Iterable[BaseAuthenticator],
+) -> typing.Optional[UserToken]:
+    """
+    Authenticate request.
+
+    Will return UserToken if at least one of the authenticators was able to get user information from the request,
+    otherwise returns None.
+
+    May raise WWWAuthenticationRequiredError when HTTPBasicAuthenticator used.
+    """
+    for authenticator in authenticators:
+        user = await authenticator.authenticate(connection)
+        if user:
+            return UserToken(user=user, state=LoginState.FRESH)
+    return None
+
+
 class AuthenticationMiddleware:
     """
     Authenticator middleware will load a user from the request using
@@ -190,20 +210,14 @@ class AuthenticationMiddleware:
         if self._should_interrupt(request):
             return await self._app(scope, receive, send)
 
-        user: typing.Optional[UserLike] = None
-        for authenticator in self._authenticators:
-            try:
-                user = await authenticator.authenticate(request)
-                if user:
-                    break
-            except WWWAuthenticationRequiredError:
-                auth_header = authenticator.get_auth_header()
-                if auth_header:
-                    response = Response(None, headers={'WWW-Authenticate': auth_header}, status_code=401)
-                    return await response(scope, receive, send)
+        try:
+            user_token = await authenticate(request, self._authenticators)
+        except WWWAuthenticationRequiredError as exc:
+            response = Response(None, headers={'WWW-Authenticate': exc.header}, status_code=401)
+            return await response(scope, receive, send)
 
-        if user:
-            scope['auth'] = UserToken(user=user, state=LoginState.FRESH)
+        if user_token:
+            scope['auth'] = user_token
         elif self._on_failure == 'raise':
             raise AuthenticationError('Could not authenticate request.')
         elif self._on_failure == 'redirect':

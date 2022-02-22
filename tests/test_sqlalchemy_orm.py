@@ -13,7 +13,7 @@ session_maker = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession
 Base = declarative_base()
 
 
-class _User(Base):
+class _User(Base):  # pragma: no cover_
     """
     This is our user model.
 

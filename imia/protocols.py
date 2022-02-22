@@ -31,7 +31,7 @@ class UserLike(HasId, HasScopes, HasHashedPassoword, HasDisplayName, typing.Prot
     ...
 
 
-class LoginGuard(typing.Protocol):
+class LoginGuard(typing.Protocol):  # pragma: no cover_
     async def __call__(self, request: Request, user: UserLike) -> None:
         ...
 
