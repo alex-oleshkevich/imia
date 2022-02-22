@@ -23,7 +23,9 @@ Let's implement a basic user provider that uses a local variable as a user stora
 ```python
 import typing as t
 
-from imia import UserProvider, UserLike
+from starlette.requests import HTTPConnection
+
+from imia import UserLike, UserProvider
 
 
 class User:
@@ -38,19 +40,19 @@ _users: list[User] = []
 class MyUserProvider(UserProvider):
     """An example user providers that stores users in a local variable."""
 
-    async def find_by_id(self, identifier: t.Any) -> t.Optional[UserLike]:
+    async def find_by_id(self, connection: HTTPConnection, identifier: t.Any) -> t.Optional[UserLike]:
         """Load user by user ID."""
         for user in _users:
             if user.id == identifier:
                 return user
 
-    async def find_by_username(self, username_or_email: str) -> t.Optional[UserLike]:
+    async def find_by_username(self, connection: HTTPConnection, username_or_email: str) -> t.Optional[UserLike]:
         """Load user by username or email."""
         for user in _users:
             if user.email == username_or_email:
                 return user
 
-    async def find_by_token(self, token: str) -> t.Optional[UserLike]:
+    async def find_by_token(self, connection: HTTPConnection, token: str) -> t.Optional[UserLike]:
         """Load user by token."""
         for user in _users:
             if user.api_token == token:
