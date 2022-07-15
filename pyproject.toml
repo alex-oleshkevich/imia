@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "imia"
 description = "Full stack authentication library for ASGI."
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Alex Oleshkevich <alex.oleshkevich@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -42,6 +42,10 @@ python-multipart = "^0.0.5"
 SQLAlchemy = { version = "^1.4.25", extras = ["mypy"] }
 aiosqlite = "^0.17.0"
 sqlalchemy2-stubs = "^0.0.2-alpha.15"
+
+[tool.poetry.extras]
+sqlalchemy = ["SQLAlchemy"]
+aiosqlite = ["aiosqlite"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
